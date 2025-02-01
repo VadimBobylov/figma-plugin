@@ -18,10 +18,11 @@ figma.showUI(
 );
 
 const breakpoints: Record<string, string> = {
-  '1366px': '$desktop-breakpoint-s',
-  '1440px': '$desktop-breakpoint-md',
-  '1920px': '$desktop-breakpoint-l',
-  '2560px': '$desktop-breakpoint-xl'
+  '1024': 'base',
+  '1366': '$desktop-breakpoint-s',
+  '1440': '$desktop-breakpoint-md',
+  '1920': '$desktop-breakpoint-l',
+  '2560': '$desktop-breakpoint-xl'
 };
 
 function toRem(value: number): string {
@@ -101,25 +102,20 @@ function processSelectedNodes(): void {
 
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
-    let bpKey: string | null = null;
     if (parentFrame) {
-      if (parentFrame.width >= 2560) {
-        bpKey = '2560px';
-      } else if (parentFrame.width >= 1920) {
-        bpKey = '1920px';
-      } else if (parentFrame.width >= 1440) {
-        bpKey = '1440px';
-      } else if (parentFrame.width >= 1366) {
-        bpKey = '1366px';
-      } else if (parentFrame.width >= 1024) {
-        bpKey = 'base';
+      const breakpoint = Object.keys(breakpoints)
+                               .map(Number)
+                               .sort((a, b) => b - a)
+                               .find(b => parentFrame.width >= b);
+
+      if (breakpoint !== undefined) {
+        const bpKey = breakpoints[String(breakpoint)];
+
+        if (!nodesByBreakpoint[bpKey]) {
+          nodesByBreakpoint[bpKey] = [];
+        }
+        nodesByBreakpoint[bpKey].push(node);
       }
-    }
-    if (bpKey) {
-      if (!nodesByBreakpoint[bpKey]) {
-        nodesByBreakpoint[bpKey] = [];
-      }
-      nodesByBreakpoint[bpKey].push(node);
     }
   });
 
@@ -129,6 +125,7 @@ function processSelectedNodes(): void {
   }
 
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
+
   const mediaKeys = Object.keys(nodesByBreakpoint)
                           .filter(key => key !== 'base')
                           .sort((a, b) => parseInt(a) - parseInt(b));
@@ -163,7 +160,7 @@ function processSelectedNodes(): void {
 
   mediaKeys.forEach(bp => {
     if (mediaQueries[bp]) {
-      generatedCSS += `@media (min-width: ${breakpoints[bp]}) {\n`;
+      generatedCSS += `@media (min-width: ${bp}) {\n`;
       for (const [prop, value] of Object.entries(mediaQueries[bp])) {
         generatedCSS += `  ${prop}: ${value};\n`;
       }
