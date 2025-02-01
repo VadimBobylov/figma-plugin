@@ -1,0 +1,14 @@
+{
+  "name": "Compare Elements",
+  "id": "compare-elements-plugin",
+  "api": "1.0.0",
+  "main": "dist/main.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma",
+    "dev"
+  ],
+  "capabilities": [
+    "inspect"
+  ]
+}

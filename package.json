@@ -1,0 +1,16 @@
+{
+  "name": "compare-elements-plugin",
+  "version": "1.0.0",
+  "description": "Figma plugin for comparing elements",
+  "main": "dist/code.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.107.0-beta.2",
+    "typescript": "^4.9.0"
+  },
+  "author": "",
+  "license": "MIT"
+}

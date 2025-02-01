@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "dist",
+    "types": [
+      "@figma/plugin-typings"
+    ]
+  },
+  "include": [
+    "*.ts"
+  ],
+  "exclude": [
+    "dist"
+  ]
+}

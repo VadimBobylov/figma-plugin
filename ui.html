@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Comparison</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          padding: 10px;
+      }
+
+      button {
+          padding: 10px;
+          cursor: pointer;
+      }
+  </style>
+</head>
+<body>
+<h3>Compare Elements</h3>
+<button id="compare">Compare</button>
+<pre id="result"></pre>
+
+<script>
+    document.getElementById("compare").onclick = () => parent.postMessage({pluginMessage: {type: "compare"}}, "*");
+
+    window.onmessage = (event) => {
+        if (event.data.pluginMessage?.type === "result") {
+            document.getElementById("result").innerText = event.data.pluginMessage.data.join("\n\n");
+        }
+    };
+</script>
+</body>
+</html>
