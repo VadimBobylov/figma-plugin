@@ -13,7 +13,6 @@
           min-height: 100vh;
           margin: 0;
       }
-
       .container {
           background: #fff;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -22,23 +21,19 @@
           max-width: 600px;
           width: 100%;
       }
-
       h3 {
           text-align: center;
           margin-bottom: 20px;
           color: #333;
       }
-
       #controls {
           margin-bottom: 20px;
       }
-
       .checkbox-container {
           display: flex;
           flex-direction: column;
           gap: 10px;
       }
-
       label {
           display: flex;
           align-items: center;
@@ -47,7 +42,6 @@
           color: #333;
           cursor: pointer;
       }
-
       input[type="checkbox"] {
           appearance: none;
           width: 20px;
@@ -59,16 +53,13 @@
           position: relative;
           cursor: pointer;
       }
-
       input[type="checkbox"]:hover {
           border-color: #888;
       }
-
       input[type="checkbox"]:checked {
           background: #4caf50;
           border-color: #4caf50;
       }
-
       input[type="checkbox"]:checked::after {
           content: "\2713";
           position: absolute;
@@ -90,7 +81,6 @@
           color: #333;
           transition: border-color 0.2s;
       }
-
       textarea:focus {
           outline: none;
           border-color: #4caf50;
@@ -101,23 +91,57 @@
 <div class="container">
   <h3>Generated Media Query</h3>
   <div id="controls">
-    <div class="checkbox-container">
-      <label><input type="checkbox" id="selectAll" checked>Select All</label>
-      <label><input type="checkbox" class="prop" value="width" checked>width</label>
-      <label><input type="checkbox" class="prop" value="height" checked>height</label>
-      <label><input type="checkbox" class="prop" value="border-radius" checked>border-radius</label>
-      <label><input type="checkbox" class="prop" value="gap" checked>gap</label>
-      <label><input type="checkbox" class="prop" value="padding" checked>padding</label>
-      <label><input type="checkbox" class="prop" value="font-size" checked>font-size</label>
-      <label><input type="checkbox" class="prop" value="font-weight" checked>font-weight</label>
-      <label><input type="checkbox" class="prop" value="line-height" checked>line-height</label>
-      <label><input type="checkbox" class="prop" value="letter-spacing" checked>letter-spacing</label>
+    <div class="checkbox-container" id="checkboxContainer">
     </div>
   </div>
   <textarea id="output" readonly></textarea>
 </div>
 <script>
-    const sendSelectedFields = () => {
+    // Функция для генерации списка чекбоксов
+    function renderCheckboxes(availableProps, selectedFields) {
+        const container = document.getElementById('checkboxContainer');
+        container.innerHTML = '';
+
+        // Создаём чекбокс Select All
+        const selectAllLabel = document.createElement('label');
+        selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll">Select All`;
+        container.appendChild(selectAllLabel);
+        const selectAllCheckbox = document.getElementById('selectAll');
+        // Отмечаем его, если все доступные проперти выбраны
+        selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
+
+        selectAllCheckbox.addEventListener('change', () => {
+            const checkboxes = document.querySelectorAll('.prop');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            sendSelectedFields();
+        });
+
+        // Создаём чекбоксы для каждой доступной проперти
+        availableProps.forEach(prop => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'prop';
+            checkbox.value = prop;
+            if (selectedFields.includes(prop)) {
+                checkbox.checked = true;
+            }
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(prop));
+            container.appendChild(label);
+
+            checkbox.addEventListener('change', () => {
+                // Пересчитываем состояние Select All
+                selectAllCheckbox.checked = Array.from(document.querySelectorAll('.prop')).every(x => x.checked);
+                sendSelectedFields();
+            });
+        });
+    }
+
+    // Отправка выбранных пользователем пропертей в плагин
+    function sendSelectedFields() {
         const checkboxes = document.querySelectorAll('.prop');
         const fields = [];
         checkboxes.forEach(cb => {
@@ -126,27 +150,22 @@
             }
         });
         parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
-    };
-    const selectAllCheckbox = document.getElementById('selectAll');
-    selectAllCheckbox.addEventListener('change', () => {
-        const checkboxes = document.querySelectorAll('.prop');
-        checkboxes.forEach(cb => cb.checked = selectAllCheckbox.checked);
-        sendSelectedFields();
-    });
-    document.querySelectorAll('.prop').forEach(cb =>
-        cb.addEventListener('change', () => {
-            if (cb.checked) {
-                selectAllCheckbox.checked = Array.from(document.querySelectorAll('.prop')).every(x => x.checked);
-            } else {
-                selectAllCheckbox.checked = false;
-            }
-            sendSelectedFields();
-        }));
+    }
+
+    // При получении сообщения от плагина обновляем CSS и генерируем чекбоксы
     window.onmessage = event => {
-        if (event.data.pluginMessage !== undefined) {
-            document.getElementById('output').value = event.data.pluginMessage;
+        const msg = event.data.pluginMessage;
+        if (msg) {
+            if (msg.css !== undefined) {
+                document.getElementById('output').value = msg.css;
+            }
+            if (msg.availableProps !== undefined && msg.selectedFields !== undefined) {
+                renderCheckboxes(msg.availableProps, msg.selectedFields);
+            }
         }
     };
+
+    // Изначально отправляем выбранные поля (по умолчанию – все)
     sendSelectedFields();
 </script>
 </body>

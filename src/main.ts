@@ -8,6 +8,7 @@ const breakpoints: Record<string, number> = {
   '$desktop-breakpoint-xl': 2560
 };
 
+// По умолчанию все проперти выбраны
 let selectedFields = [
   'width',
   'height',
@@ -67,32 +68,39 @@ function getNodeStyles(node: any): { [key: string]: any } {
   if (!node) {
     return {};
   }
-
+  const styles = {
+    width:           toRemIfNonZero(node.width),
+    height:          toRemIfNonZero(node.height),
+    'border-radius': toRemIfNonZero(node.cornerRadius),
+    gap:             toRemIfNonZero(node.itemSpacing),
+    padding:         formatPadding(node),
+    'font-size':     toRemIfNonZero(node.fontSize),
+    'font-weight':   node.fontWeight,
+    'line-height':
+                     node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
+                     ? toRem(node.lineHeight.value)
+                     : undefined,
+    'letter-spacing':
+                     node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
+  };
   return Object.fromEntries(
-    Object.entries({
-                     width:           toRemIfNonZero(node.width),
-                     height:          toRemIfNonZero(node.height),
-                     'border-radius': toRemIfNonZero(node.cornerRadius),
-                     gap:             toRemIfNonZero(node.itemSpacing),
-                     padding:         formatPadding(node),
-                     'font-size':     toRemIfNonZero(node.fontSize),
-                     'font-weight':   node.fontWeight,
-                     'line-height':
-                                      node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
-                                      ? toRem(node.lineHeight.value)
-                                      : undefined,
-                     'letter-spacing':
-                                      node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
-                   }).filter(([, value]) => value !== undefined)
+    Object.entries(styles).filter(([, value]) => value !== undefined)
   );
 }
 
 function processSelectedNodes(): void {
   const selectedNodes = figma.currentPage.selection;
   if (selectedNodes.length === 0) {
-    figma.ui.postMessage('');
+    figma.ui.postMessage({
+                           css:            '',
+                           availableProps: [],
+                           usedProps:      [],
+                           selectedFields
+                         });
     return;
   }
+
+  const availablePropsSet = new Set<string>();
 
   const breakpointEntries = Object.entries(breakpoints)
                                   .sort(([, widthA], [, widthB]) => widthB - widthA);
@@ -112,16 +120,18 @@ function processSelectedNodes(): void {
       }
     }
   });
+
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
   const mediaKeys = Object.keys(nodesByBreakpoint).sort((a, b) => breakpoints[a] - breakpoints[b]);
   let prevStyles: { [key: string]: any } = {};
+
   mediaKeys.forEach(bp => {
     const rawStyles = getNodeStyles(nodesByBreakpoint[bp]);
+    Object.keys(rawStyles).forEach(prop => availablePropsSet.add(prop));
     const nodeStyles = Object.fromEntries(
       Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop))
     );
     const diff: { [key: string]: any } = {};
-
     for (const [prop, value] of Object.entries(nodeStyles)) {
       if (prevStyles[prop] !== value) {
         diff[prop] = value;
@@ -132,6 +142,7 @@ function processSelectedNodes(): void {
     }
     prevStyles = nodeStyles;
   });
+
   let generatedCSS = '';
   mediaKeys.forEach(bp => {
     if (mediaQueries[bp]) {
@@ -141,17 +152,25 @@ function processSelectedNodes(): void {
           generatedCSS += `${prop}: ${value};\n`;
         }
         generatedCSS += '\n';
-        return;
+      } else {
+        generatedCSS += `@media (min-width: ${bp}) {\n`;
+        for (const [prop, value] of Object.entries(mediaQueries[bp])) {
+          generatedCSS += `  ${prop}: ${value};\n`;
+        }
+        generatedCSS += '}\n\n';
       }
-
-      generatedCSS += `@media (min-width: ${bp}) {\n`;
-      for (const [prop, value] of Object.entries(mediaQueries[bp])) {
-        generatedCSS += `  ${prop}: ${value};\n`;
-      }
-      generatedCSS += '}\n\n';
     }
   });
-  figma.ui.postMessage(generatedCSS);
+
+  const usedProps = new Set<string>();
+  Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
+
+  figma.ui.postMessage({
+                         css:            generatedCSS,
+                         availableProps: Array.from(availablePropsSet),
+                         usedProps:      Array.from(usedProps),
+                         selectedFields
+                       });
 }
 
 processSelectedNodes();
