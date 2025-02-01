@@ -102,6 +102,11 @@
         const container = document.getElementById('checkboxContainer');
         container.innerHTML = '';
 
+        // Если availableProps пуст, ничего не генерируем
+        if (availableProps.length === 0) {
+            return;
+        }
+
         // Создаём чекбокс Select All
         const selectAllLabel = document.createElement('label');
         selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll">Select All`;
@@ -168,5 +173,6 @@
     // Изначально отправляем выбранные поля (по умолчанию – все)
     sendSelectedFields();
 </script>
+
 </body>
 </html>
