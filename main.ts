@@ -68,19 +68,26 @@ function findParentFrame(node: SceneNode): FrameNode | null {
 }
 
 function getNodeStyles(node: any): { [key: string]: any } {
-  return {
-    width:            toRemIfNumber(node.width),
-    height:           toRemIfNumber(node.height),
-    'border-radius':  toRemIfNumber(node.cornerRadius),
-    gap:              toRemIfNumber(node.itemSpacing),
-    padding:          formatPadding(node),
-    'font-size':      toRemIfNumber(node.fontSize),
-    'font-weight':    node.fontWeight,
-    'line-height':    node.lineHeight && node.lineHeight.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
-                      ? toRem(node.lineHeight.value)
-                     : undefined,
-    'letter-spacing': node.letterSpacing?.value === 0 ? undefined : toRemIfNumber(node.letterSpacing.value),
-  };
+  if (!node) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries({
+                     width:            toRemIfNumber(node.width),
+                     height:           toRemIfNumber(node.height),
+                     'border-radius':  toRemIfNumber(node.cornerRadius),
+                     gap:              toRemIfNumber(node.itemSpacing),
+                     padding:          formatPadding(node),
+                     'font-size':      toRemIfNumber(node.fontSize),
+                     'font-weight':    node.fontWeight,
+                     'line-height':    node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
+                                       ? toRem(node.lineHeight.value)
+                                       : undefined,
+                     'letter-spacing': node.letterSpacing?.value === undefined
+                                       ? undefined : toRemIfNumber(node.letterSpacing.value),
+                   }).filter(([, value]) => value !== undefined)
+  );
 }
 
 function processSelectedNodes(): void {
@@ -118,13 +125,7 @@ function processSelectedNodes(): void {
 
   let baseStyles: { [key: string]: any } = {};
   if (nodesByBreakpoint['base'] && nodesByBreakpoint['base'].length > 0) {
-    const nodeStyles = getNodeStyles(nodesByBreakpoint['base'][0]);
-    Object.keys(nodeStyles).forEach(key => {
-      if (nodeStyles[key] === undefined) {
-        delete nodeStyles[key];
-      }
-    });
-    baseStyles = nodeStyles;
+    baseStyles = getNodeStyles(nodesByBreakpoint['base'][0]);
   }
 
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
@@ -134,11 +135,6 @@ function processSelectedNodes(): void {
 
   mediaKeys.forEach(bp => {
     const nodeStyles = getNodeStyles(nodesByBreakpoint[bp][0]);
-    Object.keys(nodeStyles).forEach(key => {
-      if (nodeStyles[key] === undefined) {
-        delete nodeStyles[key];
-      }
-    });
     const diff: { [key: string]: string | number | undefined } = {};
     for (const [prop, value] of Object.entries(nodeStyles)) {
       if (baseStyles[prop] !== value) {
