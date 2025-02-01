@@ -28,17 +28,17 @@ function toRem(value: number): string {
   return `to_rem(${value})`;
 }
 
-function toRemIfNumber(value: any): string | undefined {
-  return typeof value === 'number' ? toRem(value) : undefined;
+function toRemIfNonZero(value: any): string | undefined {
+  return typeof value === 'number' && value !== 0 ? toRem(value) : undefined;
 }
 
 function formatPadding(
   node: SceneNode & Partial<{ paddingTop: number; paddingRight: number; paddingBottom: number; paddingLeft: number }>
 ): string | undefined {
-  const top = toRemIfNumber(node.paddingTop);
-  const right = toRemIfNumber(node.paddingRight);
-  const bottom = toRemIfNumber(node.paddingBottom);
-  const left = toRemIfNumber(node.paddingLeft);
+  const top = toRemIfNonZero(node.paddingTop);
+  const right = toRemIfNonZero(node.paddingRight);
+  const bottom = toRemIfNonZero(node.paddingBottom);
+  const left = toRemIfNonZero(node.paddingLeft);
 
   if (!top && !right && !bottom && !left) {
     return undefined;
@@ -74,18 +74,18 @@ function getNodeStyles(node: any): { [key: string]: any } {
 
   return Object.fromEntries(
     Object.entries({
-                     width:            toRemIfNumber(node.width),
-                     height:           toRemIfNumber(node.height),
-                     'border-radius':  toRemIfNumber(node.cornerRadius),
-                     gap:              toRemIfNumber(node.itemSpacing),
+                     width:            toRemIfNonZero(node.width),
+                     height:           toRemIfNonZero(node.height),
+                     'border-radius':  toRemIfNonZero(node.cornerRadius),
+                     gap:              toRemIfNonZero(node.itemSpacing),
                      padding:          formatPadding(node),
-                     'font-size':      toRemIfNumber(node.fontSize),
+                     'font-size':      toRemIfNonZero(node.fontSize),
                      'font-weight':    node.fontWeight,
                      'line-height':    node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
                                        ? toRem(node.lineHeight.value)
                                        : undefined,
                      'letter-spacing': node.letterSpacing?.value === undefined
-                                       ? undefined : toRemIfNumber(node.letterSpacing.value),
+                                       ? undefined : toRemIfNonZero(node.letterSpacing.value),
                    }).filter(([, value]) => value !== undefined)
   );
 }
