@@ -1,21 +1,4 @@
-figma.showUI(
-  `
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    textarea { width: 100%; height: 300px; font-family: monospace; resize: none; }
-  </style>
-  <h3>Generated media-query</h3>
-  <textarea id="output" readonly></textarea>
-  <script>
-    window.onmessage = event => {
-      if (event.data.pluginMessage !== undefined) {
-        (document.getElementById('output')).value = event.data.pluginMessage;
-      }
-    };
-  </script>
-  `,
-  { width: 500, height: 400 }
-);
+figma.showUI(__html__);
 
 const breakpoints: Record<string, number> = {
   'base':                   1024,

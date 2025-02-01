@@ -1,31 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Comparison</title>
+  <meta charset="UTF-8"/>
+  <title>Media Query Generator</title>
   <style>
       body {
-          font-family: Arial, sans-serif;
-          padding: 10px;
+          font-family: sans-serif;
+          padding: 20px;
       }
 
-      button {
-          padding: 10px;
-          cursor: pointer;
+      textarea {
+          width: 100%;
+          height: 300px;
+          font-family: monospace;
+          resize: none;
       }
   </style>
 </head>
 <body>
-<h3>Compare Elements</h3>
-<button id="compare">Compare</button>
-<pre id="result"></pre>
-
+<h3>Generated media-query</h3>
+<textarea id="output" readonly></textarea>
 <script>
-    document.getElementById("compare").onclick = () => parent.postMessage({pluginMessage: {type: "compare"}}, "*");
-
-    window.onmessage = (event) => {
-        if (event.data.pluginMessage?.type === "result") {
-            document.getElementById("result").innerText = event.data.pluginMessage.data.join("\n\n");
+    window.onmessage = event => {
+        if (event.data.pluginMessage !== undefined) {
+            document.getElementById('output').value = event.data.pluginMessage;
         }
     };
 </script>
