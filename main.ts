@@ -24,20 +24,22 @@ const breakpoints: Record<string, string> = {
   '2560px': '$desktop-breakpoint-xl'
 };
 
-function toRem(px: number | null | undefined): string | undefined {
-  if (px == null || px === 0) {
-    return undefined;
-  }
-  return `to_rem(${px})`;
+function toRem(value: number): string {
+  return `to_rem(${value})`;
+}
+
+function toRemIfNumber(value: any): string | undefined {
+  return typeof value === 'number' ? toRem(value) : undefined;
 }
 
 function formatPadding(
   node: SceneNode & Partial<{ paddingTop: number; paddingRight: number; paddingBottom: number; paddingLeft: number }>
 ): string | undefined {
-  const top = toRem(node.paddingTop);
-  const right = toRem(node.paddingRight);
-  const bottom = toRem(node.paddingBottom);
-  const left = toRem(node.paddingLeft);
+  const top = toRemIfNumber(node.paddingTop);
+  const right = toRemIfNumber(node.paddingRight);
+  const bottom = toRemIfNumber(node.paddingBottom);
+  const left = toRemIfNumber(node.paddingLeft);
+
   if (!top && !right && !bottom && !left) {
     return undefined;
   }
@@ -65,23 +67,19 @@ function findParentFrame(node: SceneNode): FrameNode | null {
   return lastFrame;
 }
 
-function getNodeStyles(node: SceneNode): { [key: string]: any } {
+function getNodeStyles(node: any): { [key: string]: any } {
   return {
-    width:           typeof (node as any).width === 'number' ? toRem((node as any).width) : undefined,
-    height:          typeof (node as any).height === 'number' ? toRem((node as any).height) : undefined,
-    'border-radius': typeof (node as any).cornerRadius === 'number' ? toRem((node as any).cornerRadius) : undefined,
-    gap:             typeof (node as any).itemSpacing === 'number' ? toRem((node as any).itemSpacing) : undefined,
-    padding:         formatPadding(node as any),
-    'font-size':     typeof (node as any).fontSize === 'number' ? toRem((node as any).fontSize) : undefined,
-    'font-weight':   (node as any).fontWeight ?? '',
-    'line-height':
-                     (node as any).lineHeight && typeof (node as any).lineHeight.value === 'number' && (node as any).lineHeight.unit === 'PIXELS'
-                     ? toRem((node as any).lineHeight.value)
-                     : 'normal',
-    'letter-spacing':
-                     (node as any).letterSpacing && typeof (node as any).letterSpacing.value === 'number' && (node as any).letterSpacing.value !== 0
-                     ? toRem((node as any).letterSpacing.value)
+    width:            toRemIfNumber(node.width),
+    height:           toRemIfNumber(node.height),
+    'border-radius':  toRemIfNumber(node.cornerRadius),
+    gap:              toRemIfNumber(node.itemSpacing),
+    padding:          formatPadding(node),
+    'font-size':      toRemIfNumber(node.fontSize),
+    'font-weight':    node.fontWeight,
+    'line-height':    node.lineHeight && node.lineHeight.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
+                      ? toRem(node.lineHeight.value)
                      : undefined,
+    'letter-spacing': node.letterSpacing?.value === 0 ? undefined : toRemIfNumber(node.letterSpacing.value),
   };
 }
 
