@@ -137,7 +137,7 @@ function processSelectedNodes(): void {
         return;
       }
 
-      generatedCSS += `@media (min-width: ${breakpoints[bp]}px) {\n`;
+      generatedCSS += `@media (min-width: ${bp}) {\n`;
       for (const [prop, value] of Object.entries(mediaQueries[bp])) {
         generatedCSS += `  ${prop}: ${value};\n`;
       }
