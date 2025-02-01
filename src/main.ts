@@ -8,18 +8,7 @@ const breakpoints: Record<string, number> = {
   '$desktop-breakpoint-xl': 2560
 };
 
-// По умолчанию все проперти выбраны
-let selectedFields = [
-  'width',
-  'height',
-  'border-radius',
-  'gap',
-  'padding',
-  'font-size',
-  'font-weight',
-  'line-height',
-  'letter-spacing'
-];
+let selectedFields: string[] = [];
 
 function toRem(value: number): string {
   return `to_rem(${value})`;
@@ -88,14 +77,15 @@ function getNodeStyles(node: any): { [key: string]: any } {
   );
 }
 
-function processSelectedNodes(): void {
+function processSelectedNodes(selectAll = false): void {
+
   const selectedNodes = figma.currentPage.selection;
   if (selectedNodes.length === 0) {
     figma.ui.postMessage({
                            css:            '',
                            availableProps: [],
                            usedProps:      [],
-                           selectedFields
+                           selectedFields: []
                          });
     return;
   }
@@ -128,9 +118,17 @@ function processSelectedNodes(): void {
   mediaKeys.forEach(bp => {
     const rawStyles = getNodeStyles(nodesByBreakpoint[bp]);
     Object.keys(rawStyles).forEach(prop => availablePropsSet.add(prop));
-    const nodeStyles = Object.fromEntries(
-      Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop))
-    );
+    let nodeStyles: { [key: string]: any };
+
+    if (selectAll) {
+      selectedFields = Object.keys(rawStyles);
+      nodeStyles = rawStyles;
+    } else {
+      nodeStyles = Object.fromEntries(
+        Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop))
+      );
+    }
+
     const diff: { [key: string]: any } = {};
     for (const [prop, value] of Object.entries(nodeStyles)) {
       if (prevStyles[prop] !== value) {
@@ -163,6 +161,7 @@ function processSelectedNodes(): void {
   });
 
   const usedProps = new Set<string>();
+
   Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
 
   figma.ui.postMessage({
@@ -174,7 +173,7 @@ function processSelectedNodes(): void {
 }
 
 processSelectedNodes();
-figma.on('selectionchange', () => processSelectedNodes());
+figma.on('selectionchange', () => processSelectedNodes(figma.currentPage.selection.length === 1));
 figma.ui.on('message', msg => {
   if (msg.type === 'update-fields') {
     selectedFields = msg.fields;

@@ -112,7 +112,6 @@
         selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll">Select All`;
         container.appendChild(selectAllLabel);
         const selectAllCheckbox = document.getElementById('selectAll');
-        // Отмечаем его, если все доступные проперти выбраны
         selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
 
         selectAllCheckbox.addEventListener('change', () => {
