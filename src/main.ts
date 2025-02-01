@@ -172,7 +172,8 @@ function processSelectedNodes(selectAll = false): void {
                        });
 }
 
-processSelectedNodes();
+setTimeout(() => processSelectedNodes(figma.currentPage.selection.length === 1), 100);
+
 figma.on('selectionchange', () => processSelectedNodes(figma.currentPage.selection.length === 1));
 figma.ui.on('message', msg => {
   if (msg.type === 'update-fields') {
