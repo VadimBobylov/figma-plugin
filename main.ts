@@ -123,11 +123,11 @@ function processSelectedNodes(): void {
   const mediaKeys = Object.keys(nodesByBreakpoint)
                           .sort((a, b) => parseInt(a) - parseInt(b));
 
-  let prevStyles = {} as any;
+  let prevStyles: { [key: string]: any } = {};
 
   mediaKeys.forEach(bp => {
     const nodeStyles = getNodeStyles(nodesByBreakpoint[bp]);
-    const diff: { [key: string]: string | number | undefined } = {};
+    const diff: { [key: string]: any } = {};
 
     for (const [prop, value] of Object.entries(nodeStyles)) {
       if (prevStyles[prop] !== value) {
