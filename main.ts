@@ -133,17 +133,23 @@ function processSelectedNodes(): void {
                           .filter(key => key !== 'base')
                           .sort((a, b) => parseInt(a) - parseInt(b));
 
+  let prevStyles = baseStyles;
+
   mediaKeys.forEach(bp => {
     const nodeStyles = getNodeStyles(nodesByBreakpoint[bp][0]);
     const diff: { [key: string]: string | number | undefined } = {};
+
     for (const [prop, value] of Object.entries(nodeStyles)) {
-      if (baseStyles[prop] !== value) {
+      if (prevStyles[prop] !== value) {
         diff[prop] = value;
       }
     }
+
     if (Object.keys(diff).length > 0) {
       mediaQueries[bp] = diff;
     }
+
+    prevStyles = nodeStyles;
   });
 
   let generatedCSS = '';
