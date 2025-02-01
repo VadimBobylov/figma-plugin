@@ -17,12 +17,12 @@ figma.showUI(
   { width: 500, height: 400 }
 );
 
-const breakpoints: Record<string, string> = {
-  '1024': 'base',
-  '1366': '$desktop-breakpoint-s',
-  '1440': '$desktop-breakpoint-md',
-  '1920': '$desktop-breakpoint-l',
-  '2560': '$desktop-breakpoint-xl'
+const breakpoints: Record<string, number> = {
+  'base':                   1024,
+  '$desktop-breakpoint-s':  1366,
+  '$desktop-breakpoint-md': 1440,
+  '$desktop-breakpoint-l':  1920,
+  '$desktop-breakpoint-xl': 2560
 };
 
 function toRem(value: number): string {
@@ -98,21 +98,21 @@ function processSelectedNodes(): void {
     return;
   }
 
+  const breakpointEntries = Object.entries(breakpoints)
+                                  .sort(([, widthA], [, widthB]) => widthB - widthA);
+
   const nodesByBreakpoint: { [key: string]: SceneNode } = {};
 
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
     if (parentFrame) {
-      const breakpoint = Object.keys(breakpoints)
-                               .map(Number)
-                               .sort((a, b) => b - a)
-                               .find(b => parentFrame.width >= b);
-
-      if (breakpoint !== undefined) {
-        if (nodesByBreakpoint[breakpoint]) {
-          figma.notify(`A node for breakpoint ${breakpoint} is already selected!`);
+      const found = breakpointEntries.find(([, bpWidth]) => parentFrame.width >= bpWidth);
+      if (found) {
+        const [bpName, bpWidth] = found;
+        if (nodesByBreakpoint[bpName]) {
+          figma.notify(`A node for breakpoint ${bpWidth} is already selected!`);
         } else {
-          nodesByBreakpoint[breakpoint] = node;
+          nodesByBreakpoint[bpName] = node;
         }
       }
     }
@@ -120,8 +120,7 @@ function processSelectedNodes(): void {
 
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
 
-  const mediaKeys = Object.keys(nodesByBreakpoint)
-                          .sort((a, b) => parseInt(a) - parseInt(b));
+  const mediaKeys = Object.keys(nodesByBreakpoint).sort((a, b) => breakpoints[a] - breakpoints[b]);
 
   let prevStyles: { [key: string]: any } = {};
 
@@ -146,8 +145,8 @@ function processSelectedNodes(): void {
 
   mediaKeys.forEach(bp => {
     if (mediaQueries[bp]) {
-      if (breakpoints[bp] === 'base') {
-        generatedCSS += `/* Base styles (${bp}px) */\n`;
+      if (bp === 'base') {
+        generatedCSS += `/* Base styles (${breakpoints[bp]}px) */\n`;
         for (const [prop, value] of Object.entries(mediaQueries[bp])) {
           generatedCSS += `${prop}: ${value};\n`;
         }
@@ -155,14 +154,13 @@ function processSelectedNodes(): void {
         return;
       }
 
-      generatedCSS += `@media (min-width: ${breakpoints[bp]}) {\n`;
+      generatedCSS += `@media (min-width: ${breakpoints[bp]}px) {\n`;
       for (const [prop, value] of Object.entries(mediaQueries[bp])) {
         generatedCSS += `  ${prop}: ${value};\n`;
       }
       generatedCSS += '}\n\n';
     }
   });
-
 
   figma.ui.postMessage(generatedCSS);
 }
