@@ -98,11 +98,10 @@ function processSelectedNodes(): void {
     return;
   }
 
-  const nodesByBreakpoint: { [key: string]: SceneNode[] } = {};
+  const nodesByBreakpoint: { [key: string]: SceneNode } = {};
 
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
-
     if (parentFrame) {
       const breakpoint = Object.keys(breakpoints)
                                .map(Number)
@@ -110,30 +109,24 @@ function processSelectedNodes(): void {
                                .find(b => parentFrame.width >= b);
 
       if (breakpoint !== undefined) {
-        if (!nodesByBreakpoint[breakpoint]) {
-          nodesByBreakpoint[breakpoint] = [];
+        if (nodesByBreakpoint[breakpoint]) {
+          figma.notify(`A node for breakpoint ${breakpoint} is already selected!`);
+        } else {
+          nodesByBreakpoint[breakpoint] = node;
         }
-
-        nodesByBreakpoint[breakpoint].push(node);
       }
     }
   });
 
-  let baseStyles: { [key: string]: any } = {};
-  if (nodesByBreakpoint['base'] && nodesByBreakpoint['base'].length > 0) {
-    baseStyles = getNodeStyles(nodesByBreakpoint['base'][0]);
-  }
-
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
 
   const mediaKeys = Object.keys(nodesByBreakpoint)
-                          .filter(key => key !== 'base')
                           .sort((a, b) => parseInt(a) - parseInt(b));
 
-  let prevStyles = baseStyles;
+  let prevStyles = {} as any;
 
   mediaKeys.forEach(bp => {
-    const nodeStyles = getNodeStyles(nodesByBreakpoint[bp][0]);
+    const nodeStyles = getNodeStyles(nodesByBreakpoint[bp]);
     const diff: { [key: string]: string | number | undefined } = {};
 
     for (const [prop, value] of Object.entries(nodeStyles)) {
@@ -150,17 +143,18 @@ function processSelectedNodes(): void {
   });
 
   let generatedCSS = '';
-  if (Object.keys(baseStyles).length > 0) {
-    generatedCSS += '/* Base styles (1024px) */\n';
-    for (const [prop, value] of Object.entries(baseStyles)) {
-      generatedCSS += `${prop}: ${value};\n`;
-    }
-    generatedCSS += '\n';
-  }
 
   mediaKeys.forEach(bp => {
-    console.log('bp', bp);
     if (mediaQueries[bp]) {
+      if (breakpoints[bp] === 'base') {
+        generatedCSS += `/* Base styles (${bp}px) */\n`;
+        for (const [prop, value] of Object.entries(mediaQueries[bp])) {
+          generatedCSS += `${prop}: ${value};\n`;
+        }
+        generatedCSS += '\n';
+        return;
+      }
+
       generatedCSS += `@media (min-width: ${breakpoints[bp]}) {\n`;
       for (const [prop, value] of Object.entries(mediaQueries[bp])) {
         generatedCSS += `  ${prop}: ${value};\n`;
@@ -168,6 +162,7 @@ function processSelectedNodes(): void {
       generatedCSS += '}\n\n';
     }
   });
+
 
   figma.ui.postMessage(generatedCSS);
 }
