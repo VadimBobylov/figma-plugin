@@ -1,12 +1,24 @@
 figma.showUI(__html__);
 
 const breakpoints: Record<string, number> = {
-  'base':                   1024,
+  base: 1024,
   '$desktop-breakpoint-s':  1366,
   '$desktop-breakpoint-md': 1440,
   '$desktop-breakpoint-l':  1920,
   '$desktop-breakpoint-xl': 2560
 };
+
+let selectedFields = [
+  'width',
+  'height',
+  'border-radius',
+  'gap',
+  'padding',
+  'font-size',
+  'font-weight',
+  'line-height',
+  'letter-spacing'
+];
 
 function toRem(value: number): string {
   return `to_rem(${value})`;
@@ -58,18 +70,19 @@ function getNodeStyles(node: any): { [key: string]: any } {
 
   return Object.fromEntries(
     Object.entries({
-                     width:            toRemIfNonZero(node.width),
-                     height:           toRemIfNonZero(node.height),
-                     'border-radius':  toRemIfNonZero(node.cornerRadius),
-                     gap:              toRemIfNonZero(node.itemSpacing),
-                     padding:          formatPadding(node),
-                     'font-size':      toRemIfNonZero(node.fontSize),
-                     'font-weight':    node.fontWeight,
-                     'line-height':    node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
-                                       ? toRem(node.lineHeight.value)
-                                       : undefined,
-                     'letter-spacing': node.letterSpacing?.value === undefined
-                                       ? undefined : toRemIfNonZero(node.letterSpacing.value),
+                     width:           toRemIfNonZero(node.width),
+                     height:          toRemIfNonZero(node.height),
+                     'border-radius': toRemIfNonZero(node.cornerRadius),
+                     gap:             toRemIfNonZero(node.itemSpacing),
+                     padding:         formatPadding(node),
+                     'font-size':     toRemIfNonZero(node.fontSize),
+                     'font-weight':   node.fontWeight,
+                     'line-height':
+                                      node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
+                                      ? toRem(node.lineHeight.value)
+                                      : undefined,
+                     'letter-spacing':
+                                      node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
                    }).filter(([, value]) => value !== undefined)
   );
 }
@@ -85,7 +98,6 @@ function processSelectedNodes(): void {
                                   .sort(([, widthA], [, widthB]) => widthB - widthA);
 
   const nodesByBreakpoint: { [key: string]: SceneNode } = {};
-
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
     if (parentFrame) {
@@ -100,15 +112,14 @@ function processSelectedNodes(): void {
       }
     }
   });
-
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
-
   const mediaKeys = Object.keys(nodesByBreakpoint).sort((a, b) => breakpoints[a] - breakpoints[b]);
-
   let prevStyles: { [key: string]: any } = {};
-
   mediaKeys.forEach(bp => {
-    const nodeStyles = getNodeStyles(nodesByBreakpoint[bp]);
+    const rawStyles = getNodeStyles(nodesByBreakpoint[bp]);
+    const nodeStyles = Object.fromEntries(
+      Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop))
+    );
     const diff: { [key: string]: any } = {};
 
     for (const [prop, value] of Object.entries(nodeStyles)) {
@@ -116,16 +127,12 @@ function processSelectedNodes(): void {
         diff[prop] = value;
       }
     }
-
     if (Object.keys(diff).length > 0) {
       mediaQueries[bp] = diff;
     }
-
     prevStyles = nodeStyles;
   });
-
   let generatedCSS = '';
-
   mediaKeys.forEach(bp => {
     if (mediaQueries[bp]) {
       if (bp === 'base') {
@@ -144,9 +151,14 @@ function processSelectedNodes(): void {
       generatedCSS += '}\n\n';
     }
   });
-
   figma.ui.postMessage(generatedCSS);
 }
 
 processSelectedNodes();
 figma.on('selectionchange', () => processSelectedNodes());
+figma.ui.on('message', msg => {
+  if (msg.type === 'update-fields') {
+    selectedFields = msg.fields;
+    processSelectedNodes();
+  }
+});
