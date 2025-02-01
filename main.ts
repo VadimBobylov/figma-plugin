@@ -102,6 +102,7 @@ function processSelectedNodes(): void {
 
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
+
     if (parentFrame) {
       const breakpoint = Object.keys(breakpoints)
                                .map(Number)
@@ -109,12 +110,11 @@ function processSelectedNodes(): void {
                                .find(b => parentFrame.width >= b);
 
       if (breakpoint !== undefined) {
-        const bpKey = breakpoints[String(breakpoint)];
-
-        if (!nodesByBreakpoint[bpKey]) {
-          nodesByBreakpoint[bpKey] = [];
+        if (!nodesByBreakpoint[breakpoint]) {
+          nodesByBreakpoint[breakpoint] = [];
         }
-        nodesByBreakpoint[bpKey].push(node);
+
+        nodesByBreakpoint[breakpoint].push(node);
       }
     }
   });
@@ -159,8 +159,9 @@ function processSelectedNodes(): void {
   }
 
   mediaKeys.forEach(bp => {
+    console.log('bp', bp);
     if (mediaQueries[bp]) {
-      generatedCSS += `@media (min-width: ${bp}) {\n`;
+      generatedCSS += `@media (min-width: ${breakpoints[bp]}) {\n`;
       for (const [prop, value] of Object.entries(mediaQueries[bp])) {
         generatedCSS += `  ${prop}: ${value};\n`;
       }
