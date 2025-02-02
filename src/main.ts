@@ -78,7 +78,6 @@ function getNodeStyles(node: any): { [key: string]: any } {
 }
 
 function processSelectedNodes(selectAll = false): void {
-
   const selectedNodes = figma.currentPage.selection;
   if (selectedNodes.length === 0) {
     figma.ui.postMessage({
@@ -161,7 +160,6 @@ function processSelectedNodes(selectAll = false): void {
   });
 
   const usedProps = new Set<string>();
-
   Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
 
   figma.ui.postMessage({
@@ -172,12 +170,45 @@ function processSelectedNodes(selectAll = false): void {
                        });
 }
 
+// Обработчик навигации по иерархии (вверх/вниз)
+function navigateSelection(direction: 'up' | 'down'): void {
+  const currentSelection = figma.currentPage.selection;
+  const newSelection: SceneNode[] = [];
+
+  currentSelection.forEach(node => {
+    if (direction === 'up') {
+      // Если родитель существует и не является страницей – выбираем родительский узел
+      if (node.parent && node.parent.type !== 'PAGE') {
+        newSelection.push(node.parent as SceneNode);
+      }
+    } else if (direction === 'down') {
+      // Если у узла есть дочерние элементы, выбираем первый из них
+      if ('children' in node && node.children.length > 0) {
+        newSelection.push(node.children[0] as SceneNode);
+      }
+    }
+  });
+
+  if (newSelection.length > 0) {
+    figma.currentPage.selection = newSelection;
+    // figma.viewport.scrollAndZoomIntoView(newSelection);
+    setTimeout(() => processSelectedNodes(true), 100); // Перегенерировать CSS и обновить UI
+  } else {
+    figma.notify(`Нет элементов для перехода ${direction === 'up' ? 'вверх' : 'вниз'}`);
+  }
+}
+
 setTimeout(() => processSelectedNodes(figma.currentPage.selection.length === 1), 100);
 
 figma.on('selectionchange', () => processSelectedNodes(figma.currentPage.selection.length === 1));
+
 figma.ui.on('message', msg => {
   if (msg.type === 'update-fields') {
     selectedFields = msg.fields;
     processSelectedNodes();
+  }
+  if (msg.type === 'navigate') {
+    // msg.direction: 'up' или 'down'
+    navigateSelection(msg.direction);
   }
 });
