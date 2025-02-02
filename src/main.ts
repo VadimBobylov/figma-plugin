@@ -2,13 +2,15 @@ figma.showUI(__html__);
 
 const breakpoints: Record<string, number> = {
   base: 1024,
-  '$desktop-breakpoint-s':  1366,
+  '$desktop-breakpoint-s': 1366,
   '$desktop-breakpoint-md': 1440,
-  '$desktop-breakpoint-l':  1920,
+  '$desktop-breakpoint-l': 1920,
   '$desktop-breakpoint-xl': 2560
 };
 
 let selectedFields: string[] = [];
+// Глобальное хранилище для найденных нод по брейкпоинтам – используется для переключения экранов
+let nodesByBreakpointGlobal: Record<string, SceneNode> = {};
 
 function toRem(value: number): string {
   return `to_rem(${value})`;
@@ -81,19 +83,23 @@ function processSelectedNodes(selectAll = false): void {
   const selectedNodes = figma.currentPage.selection;
   if (selectedNodes.length === 0) {
     figma.ui.postMessage({
-                           css:            '',
+                           css:       '',
                            availableProps: [],
-                           usedProps:      [],
-                           selectedFields: []
+                           usedProps: [],
+                           selectedFields
                          });
+    // Обновляем глобальное хранилище – очищаем
+    nodesByBreakpointGlobal = {};
     return;
   }
 
   const availablePropsSet = new Set<string>();
 
+  // Сортируем брейкпоинты по убыванию ширины, чтобы выбрать наибольший подходящий
   const breakpointEntries = Object.entries(breakpoints)
                                   .sort(([, widthA], [, widthB]) => widthB - widthA);
 
+  // Собираем найденные ноды по брейкпоинтам
   const nodesByBreakpoint: { [key: string]: SceneNode } = {};
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
@@ -102,13 +108,16 @@ function processSelectedNodes(selectAll = false): void {
       if (found) {
         const [bpName, bpWidth] = found;
         if (nodesByBreakpoint[bpName]) {
-          figma.notify(`A node for breakpoint ${bpWidth} is already selected!`);
+          figma.notify(`Уже выбран элемент для брейкпоинта ${bpWidth}px!`);
         } else {
           nodesByBreakpoint[bpName] = node;
         }
       }
     }
   });
+
+  // Сохраняем найденные ноды в глобальной переменной для последующего переключения экранов
+  nodesByBreakpointGlobal = nodesByBreakpoint;
 
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
   const mediaKeys = Object.keys(nodesByBreakpoint).sort((a, b) => breakpoints[a] - breakpoints[b]);
@@ -163,11 +172,25 @@ function processSelectedNodes(selectAll = false): void {
   Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
 
   figma.ui.postMessage({
-                         css:            generatedCSS,
+                         css:       generatedCSS,
                          availableProps: Array.from(availablePropsSet),
-                         usedProps:      Array.from(usedProps),
-                         selectedFields
+                         usedProps: Array.from(usedProps),
+                         selectedFields,
+                         // Передаём список брейкпоинтов для UI (имя и ширину)
+                         breakpoints: Object.entries(breakpoints).map(([name, width]) => ({ name, width }))
                        });
+}
+
+// Функция для переключения на экран (брейкпоинт)
+function switchToBreakpoint(bp: string): void {
+  const node = nodesByBreakpointGlobal[bp];
+  if (node) {
+    // figma.currentPage.selection = [node];
+    figma.viewport.scrollAndZoomIntoView([node]);
+    processSelectedNodes();
+  } else {
+    figma.notify(`Элемент для брейкпоинта ${bp} не найден.`);
+  }
 }
 
 // Функция навигации по иерархии вверх/вниз (родитель/первый дочерний)
@@ -189,7 +212,6 @@ function navigateSelection(direction: 'up' | 'down'): void {
 
   if (newSelection.length > 0) {
     figma.currentPage.selection = newSelection;
-    // Не изменяем viewport – остаёмся в текущей области просмотра
     processSelectedNodes();
   } else {
     figma.notify(`Нет элементов для перехода ${direction === 'up' ? 'вверх' : 'вниз'}`);
@@ -219,7 +241,6 @@ function navigateSiblings(direction: 'prev' | 'next'): void {
   const newSelection = Array.from(newSelectionSet);
   if (newSelection.length > 0) {
     figma.currentPage.selection = newSelection;
-    // Не перемещаем viewport
     processSelectedNodes();
   } else {
     figma.notify(`Нет соседних элементов для перехода ${direction === 'prev' ? 'влево' : 'вправо'}`);
@@ -227,7 +248,6 @@ function navigateSiblings(direction: 'prev' | 'next'): void {
 }
 
 setTimeout(() => processSelectedNodes(figma.currentPage.selection.length === 1), 100);
-
 figma.on('selectionchange', () => processSelectedNodes(figma.currentPage.selection.length === 1));
 
 figma.ui.on('message', msg => {
@@ -242,5 +262,9 @@ figma.ui.on('message', msg => {
   if (msg.type === 'navigateSibling') {
     // msg.direction: 'prev' или 'next'
     navigateSiblings(msg.direction);
+  }
+  if (msg.type === 'switchToBreakpoint') {
+    // msg.bp содержит имя брейкпоинта
+    switchToBreakpoint(msg.bp);
   }
 });

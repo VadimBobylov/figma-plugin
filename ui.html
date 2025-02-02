@@ -22,27 +22,68 @@
           width: 100%;
           text-align: center;
       }
-
       h3 {
           margin-bottom: 15px;
           color: #333;
       }
-      #controls {
+
+      /* Селекторы по пропертям */
+      .checkbox-container {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          width: 100%;
+          justify-content: center;
           margin-bottom: 15px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 15px;
       }
 
-      /* Блок навигации */
+      label {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 14px;
+          color: #333;
+          cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+      }
+
+      textarea {
+          width: 100%;
+          height: 200px;
+          resize: none;
+          border: 2px solid #ccc;
+          border-radius: 6px;
+          padding: 10px;
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+          color: #333;
+          transition: border-color 0.2s;
+          margin-bottom: 15px;
+      }
+
+      textarea:focus {
+          outline: none;
+          border-color: #4caf50;
+      }
+
+      /* Переключалки навигации и экранов */
+      #controls {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          align-items: center;
+      }
       .nav-container {
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 5px;
       }
-
       .nav-row {
           display: flex;
           justify-content: center;
@@ -66,47 +107,29 @@
       .nav-button:hover {
           background: #e0e0e0;
       }
-
       .nav-button:active {
           transform: scale(0.95);
       }
 
-      /* Чекбоксы в две колонки */
-      .checkbox-container {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 8px;
-          width: 100%;
+      .screen-container {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
           justify-content: center;
       }
-      label {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 14px;
-          color: #333;
+
+      .screen-button {
+          padding: 4px 8px;
+          font-size: 12px;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+          background: #e8e8e8;
           cursor: pointer;
+          transition: background 0.2s;
       }
-      input[type="checkbox"] {
-          width: 16px;
-          height: 16px;
-          cursor: pointer;
-      }
-      textarea {
-          width: 100%;
-          height: 200px;
-          resize: none;
-          border: 2px solid #ccc;
-          border-radius: 6px;
-          padding: 10px;
-          font-family: 'Courier New', monospace;
-          font-size: 14px;
-          color: #333;
-          transition: border-color 0.2s;
-      }
-      textarea:focus {
-          outline: none;
-          border-color: #4caf50;
+
+      .screen-button:hover {
+          background: #d0d0d0;
       }
   </style>
 </head>
@@ -114,8 +137,14 @@
 <div class="container">
   <h3>Generated Media Query</h3>
 
+  <!-- Селекторы по пропертям -->
+  <div class="checkbox-container" id="checkboxContainer"></div>
+
+  <!-- Вывод медиа-квери -->
+  <textarea id="output" readonly></textarea>
+
+  <!-- Переключалки навигации и экранов -->
   <div id="controls">
-    <!-- Блок навигации -->
     <div class="nav-container">
       <button class="nav-button" id="navUp" title="Перейти к родительскому элементу">⬆ Parent</button>
       <div class="nav-row">
@@ -124,90 +153,111 @@
       </div>
       <button class="nav-button" id="navDown" title="Перейти к дочернему элементу">⬇ Children</button>
     </div>
-
-    <!-- Контейнер для чекбоксов -->
-    <div class="checkbox-container" id="checkboxContainer"></div>
+    <!-- Кнопки переключения экранов -->
+    <div class="screen-container" id="screenContainer"></div>
   </div>
 
-  <textarea id="output" readonly></textarea>
+  <script>
+      function renderCheckboxes(availableProps, selectedFields) {
+          const container = document.getElementById('checkboxContainer');
+          container.innerHTML = '';
+
+          if (availableProps.length === 0) return;
+
+          // Чекбокс "Выбрать все"
+          const selectAllLabel = document.createElement('label');
+          selectAllLabel.style.gridColumn = 'span 2';
+          selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll"> Select All`;
+          container.appendChild(selectAllLabel);
+
+          const selectAllCheckbox = document.getElementById('selectAll');
+          selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
+
+          selectAllCheckbox.addEventListener('change', () => {
+              document.querySelectorAll('.prop').forEach(cb => {
+                  cb.checked = selectAllCheckbox.checked;
+              });
+              sendSelectedFields();
+          });
+
+          availableProps.forEach(prop => {
+              const label = document.createElement('label');
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.className = 'prop';
+              checkbox.value = prop;
+              if (selectedFields.includes(prop)) checkbox.checked = true;
+
+              label.appendChild(checkbox);
+              label.appendChild(document.createTextNode(prop));
+              container.appendChild(label);
+
+              checkbox.addEventListener('change', () => {
+                  selectAllCheckbox.checked = [...document.querySelectorAll('.prop')].every(cb => cb.checked);
+                  sendSelectedFields();
+              });
+          });
+      }
+
+      // Функция отрисовки кнопок для переключения экранов
+      function renderScreenButtons(breakpoints) {
+          const container = document.getElementById('screenContainer');
+          container.innerHTML = '';
+
+          if (!breakpoints || breakpoints.length === 0) return;
+
+          // Сортировка от большего к меньшему по ширине
+          breakpoints.sort((a, b) => b.width - a.width);
+
+          breakpoints.forEach(bp => {
+              const btn = document.createElement('button');
+              btn.className = 'screen-button';
+              // Отображаем только ширину
+              btn.textContent = `${bp.width}px`;
+              btn.addEventListener('click', () => {
+                  parent.postMessage({pluginMessage: {type: 'switchToBreakpoint', bp: bp.name}}, '*');
+              });
+              container.appendChild(btn);
+          });
+      }
+
+      function sendSelectedFields() {
+          const fields = [...document.querySelectorAll('.prop')]
+              .filter(cb => cb.checked)
+              .map(cb => cb.value);
+          parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
+      }
+
+      document.getElementById('navUp').addEventListener('click', () => {
+          parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
+      });
+      document.getElementById('navDown').addEventListener('click', () => {
+          parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
+      });
+      document.getElementById('navPrev').addEventListener('click', () => {
+          parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
+      });
+      document.getElementById('navNext').addEventListener('click', () => {
+          parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'next'}}, '*');
+      });
+
+      window.onmessage = event => {
+          const msg = event.data.pluginMessage;
+          if (msg) {
+              if (msg.css !== undefined) {
+                  document.getElementById('output').value = msg.css;
+              }
+              if (msg.availableProps !== undefined && msg.selectedFields !== undefined) {
+                  renderCheckboxes(msg.availableProps, msg.selectedFields);
+              }
+              if (msg.breakpoints !== undefined) {
+                  renderScreenButtons(msg.breakpoints);
+              }
+          }
+      };
+
+      sendSelectedFields();
+  </script>
 </div>
-
-<script>
-    function renderCheckboxes(availableProps, selectedFields) {
-        const container = document.getElementById('checkboxContainer');
-        container.innerHTML = '';
-
-        if (availableProps.length === 0) return;
-
-        // Создаём чекбокс "Выбрать все"
-        const selectAllLabel = document.createElement('label');
-        selectAllLabel.style.gridColumn = 'span 2'; // Занимает всю ширину
-        selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll"> Select All`;
-        container.appendChild(selectAllLabel);
-
-        const selectAllCheckbox = document.getElementById('selectAll');
-        selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
-
-        selectAllCheckbox.addEventListener('change', () => {
-            document.querySelectorAll('.prop').forEach(cb => {
-                cb.checked = selectAllCheckbox.checked;
-            });
-            sendSelectedFields();
-        });
-
-        availableProps.forEach(prop => {
-            const label = document.createElement('label');
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'prop';
-            checkbox.value = prop;
-            if (selectedFields.includes(prop)) checkbox.checked = true;
-
-            label.appendChild(checkbox);
-            label.appendChild(document.createTextNode(prop));
-            container.appendChild(label);
-
-            checkbox.addEventListener('change', () => {
-                selectAllCheckbox.checked = [...document.querySelectorAll('.prop')].every(cb => cb.checked);
-                sendSelectedFields();
-            });
-        });
-    }
-
-    function sendSelectedFields() {
-        const fields = [...document.querySelectorAll('.prop')]
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-        parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
-    }
-
-    document.getElementById('navUp').addEventListener('click', () => {
-        parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
-    });
-    document.getElementById('navDown').addEventListener('click', () => {
-        parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
-    });
-    document.getElementById('navPrev').addEventListener('click', () => {
-        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
-    });
-    document.getElementById('navNext').addEventListener('click', () => {
-        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'next'}}, '*');
-    });
-
-    window.onmessage = event => {
-        const msg = event.data.pluginMessage;
-        if (msg) {
-            if (msg.css !== undefined) {
-                document.getElementById('output').value = msg.css;
-            }
-            if (msg.availableProps !== undefined && msg.selectedFields !== undefined) {
-                renderCheckboxes(msg.availableProps, msg.selectedFields);
-            }
-        }
-    };
-
-    sendSelectedFields();
-</script>
-
 </body>
 </html>
