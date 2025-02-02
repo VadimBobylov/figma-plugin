@@ -26,6 +26,11 @@
           margin-bottom: 15px;
           color: #333;
       }
+
+      /* Переключатель флага to_rem */
+      .toggle-container {
+          margin-bottom: 15px;
+      }
       /* Селекторы по пропертям */
       .checkbox-container {
           display: grid;
@@ -72,7 +77,6 @@
           gap: 15px;
           align-items: center;
       }
-
       .history-container {
           display: flex;
           gap: 10px;
@@ -132,6 +136,14 @@
 <body>
 <div class="container">
   <h3>Generated Media Query</h3>
+
+  <!-- Переключатель флага to_rem -->
+  <div class="toggle-container">
+    <label>
+      <input type="checkbox" id="useToRemCheckbox" checked>
+      Use to_rem
+    </label>
+  </div>
 
   <!-- Селекторы по пропертям -->
   <div class="checkbox-container" id="checkboxContainer"></div>
@@ -228,6 +240,12 @@
               .map(cb => cb.value);
           parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
       }
+
+      // Обработчик переключателя useToRem
+      document.getElementById('useToRemCheckbox').addEventListener('change', (e) => {
+          const useToRem = e.target.checked;
+          parent.postMessage({pluginMessage: {type: 'toggleToRem', useToRem}}, '*');
+      });
 
       document.getElementById('navUp').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');

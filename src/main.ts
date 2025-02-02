@@ -16,8 +16,11 @@ let nodesByBreakpointGlobal: Record<string, SceneNode> = {};
 let selectionHistory: SceneNode[][] = [];
 let historyIndex = -1;
 
+// Глобальный флаг: использовать ли to_rem или нет
+let useToRem: boolean = true;
+
 function toRem(value: number): string {
-  return `to_rem(${value})`;
+  return useToRem ? `to_rem(${value})` : `${value}px`;
 }
 
 function toRemIfNonZero(value: any): string | undefined {
@@ -111,8 +114,8 @@ function recordSelection() {
 function updateHistoryButtons() {
   // Можно отправить в UI информацию о том, активны ли кнопки (например, для дизейбла)
   figma.ui.postMessage({
-                         type:                  'update-history-buttons',
-                         historyBackEnabled:    historyIndex > 0,
+                         type:               'update-history-buttons',
+                         historyBackEnabled: historyIndex > 0,
                          historyForwardEnabled: historyIndex < selectionHistory.length - 1
                        });
 }
@@ -339,5 +342,9 @@ figma.ui.on('message', msg => {
   }
   if (msg.type === 'historyForward') {
     goHistoryForward();
+  }
+  if (msg.type === 'toggleToRem') {
+    useToRem = msg.useToRem;
+    processSelectedNodes();
   }
 });
