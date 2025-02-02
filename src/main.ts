@@ -9,14 +9,9 @@ const breakpoints: Record<string, number> = {
 };
 
 let selectedFields: string[] = [];
-// Глобальное хранилище для найденных нод по брейкпоинтам – используется для переключения экранов
 let nodesByBreakpointGlobal: Record<string, SceneNode> = {};
-
-// Глобальные переменные для истории выделения
 let selectionHistory: SceneNode[][] = [];
 let historyIndex = -1;
-
-// Глобальный флаг: использовать ли to_rem или нет
 let useToRem: boolean = true;
 
 function toRem(value: number): string {
@@ -27,14 +22,16 @@ function toRemIfNonZero(value: any): string | undefined {
   return typeof value === 'number' && value !== 0 ? toRem(value) : undefined;
 }
 
-function formatPadding(
-  node: SceneNode & Partial<{ paddingTop: number; paddingRight: number; paddingBottom: number; paddingLeft: number }>
-): string | undefined {
+function formatPadding(node: SceneNode & Partial<{
+  paddingTop: number;
+  paddingRight: number;
+  paddingBottom: number;
+  paddingLeft: number
+}>): string | undefined {
   const top = toRemIfNonZero(node.paddingTop);
   const right = toRemIfNonZero(node.paddingRight);
   const bottom = toRemIfNonZero(node.paddingBottom);
   const left = toRemIfNonZero(node.paddingLeft);
-
   if (!top && !right && !bottom && !left) {
     return undefined;
   }
@@ -67,42 +64,30 @@ function getNodeStyles(node: any): { [key: string]: any } {
     return {};
   }
   const styles = {
-    width:           toRemIfNonZero(node.width),
-    height:          toRemIfNonZero(node.height),
+    width:            toRemIfNonZero(node.width),
+    height:           toRemIfNonZero(node.height),
     'border-radius': toRemIfNonZero(node.cornerRadius),
-    gap:             toRemIfNonZero(node.itemSpacing),
-    padding:         formatPadding(node),
-    'font-size':     toRemIfNonZero(node.fontSize),
-    'font-weight':   node.fontWeight,
-    'line-height':
-                     node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number'
-                     ? toRem(node.lineHeight.value)
-                     : undefined,
-    'letter-spacing':
-                     node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
+    gap:              toRemIfNonZero(node.itemSpacing),
+    padding:          formatPadding(node),
+    'font-size':      toRemIfNonZero(node.fontSize),
+    'font-weight':    node.fontWeight,
+    'line-height':    node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number' ? toRem(node.lineHeight.value) : undefined,
+    'letter-spacing': node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
   };
-  return Object.fromEntries(
-    Object.entries(styles).filter(([, value]) => value !== undefined)
-  );
+  return Object.fromEntries(Object.entries(styles).filter(([, value]) => value !== undefined));
 }
 
 function recordSelection() {
-  const currentSelection = [...figma.currentPage.selection]; // Преобразуем readonly массив в изменяемый
+  const currentSelection = [...figma.currentPage.selection];
   if (currentSelection.length === 0) {
     return;
   }
-
-  // Если история не пуста и текущее выделение совпадает с последним, не записываем его повторно
   if (historyIndex >= 0) {
     const lastSelection = selectionHistory[historyIndex];
-    if (
-      lastSelection.length === currentSelection.length &&
-      lastSelection.every((node, i) => node.id === currentSelection[i].id)
-    ) {
+    if (lastSelection.length === currentSelection.length && lastSelection.every((node, i) => node.id === currentSelection[i].id)) {
       return;
     }
   }
-  // Если мы вернулись назад по истории и делаем новое выделение – удаляем "будущее"
   if (historyIndex < selectionHistory.length - 1) {
     selectionHistory = selectionHistory.slice(0, historyIndex + 1);
   }
@@ -112,9 +97,8 @@ function recordSelection() {
 }
 
 function updateHistoryButtons() {
-  // Можно отправить в UI информацию о том, активны ли кнопки (например, для дизейбла)
   figma.ui.postMessage({
-                         type:               'update-history-buttons',
+                         type: 'update-history-buttons',
                          historyBackEnabled: historyIndex > 0,
                          historyForwardEnabled: historyIndex < selectionHistory.length - 1
                        });
@@ -129,21 +113,12 @@ function processSelectedNodes(selectAll = false): void {
                            usedProps: [],
                            selectedFields
                          });
-    // Очищаем глобальное хранилище нод для брейкпоинтов
     nodesByBreakpointGlobal = {};
     return;
   }
-
-  // Запоминаем текущее выделение
   recordSelection();
-
   const availablePropsSet = new Set<string>();
-
-  // Сортируем брейкпоинты по убыванию ширины, чтобы выбрать наибольший подходящий
-  const breakpointEntries = Object.entries(breakpoints)
-                                  .sort(([, widthA], [, widthB]) => widthB - widthA);
-
-  // Собираем найденные ноды по брейкпоинтам
+  const breakpointEntries = Object.entries(breakpoints).sort(([, widthA], [, widthB]) => widthB - widthA);
   const nodesByBreakpoint: { [key: string]: SceneNode } = {};
   selectedNodes.forEach(node => {
     const parentFrame = findParentFrame(node);
@@ -152,35 +127,27 @@ function processSelectedNodes(selectAll = false): void {
       if (found) {
         const [bpName, bpWidth] = found;
         if (nodesByBreakpoint[bpName]) {
-          figma.notify(`Уже выбран элемент для брейкпоинта ${bpWidth}px!`);
+          figma.notify(`Element for breakpoint ${bpWidth}px already selected!`);
         } else {
           nodesByBreakpoint[bpName] = node;
         }
       }
     }
   });
-
-  // Сохраняем найденные ноды в глобальной переменной для последующего переключения экранов
   nodesByBreakpointGlobal = nodesByBreakpoint;
-
   const mediaQueries: { [key: string]: { [key: string]: any } } = {};
   const mediaKeys = Object.keys(nodesByBreakpoint).sort((a, b) => breakpoints[a] - breakpoints[b]);
   let prevStyles: { [key: string]: any } = {};
-
   mediaKeys.forEach(bp => {
     const rawStyles = getNodeStyles(nodesByBreakpoint[bp]);
     Object.keys(rawStyles).forEach(prop => availablePropsSet.add(prop));
     let nodeStyles: { [key: string]: any };
-
     if (selectAll) {
       selectedFields = Object.keys(rawStyles);
       nodeStyles = rawStyles;
     } else {
-      nodeStyles = Object.fromEntries(
-        Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop))
-      );
+      nodeStyles = Object.fromEntries(Object.entries(rawStyles).filter(([prop]) => selectedFields.includes(prop)));
     }
-
     const diff: { [key: string]: any } = {};
     for (const [prop, value] of Object.entries(nodeStyles)) {
       if (prevStyles[prop] !== value) {
@@ -192,7 +159,6 @@ function processSelectedNodes(selectAll = false): void {
     }
     prevStyles = nodeStyles;
   });
-
   let generatedCSS = '';
   mediaKeys.forEach(bp => {
     if (mediaQueries[bp]) {
@@ -211,32 +177,27 @@ function processSelectedNodes(selectAll = false): void {
       }
     }
   });
-
   const usedProps = new Set<string>();
   Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
-
   figma.ui.postMessage({
                          css: generatedCSS,
                          availableProps: Array.from(availablePropsSet),
                          usedProps: Array.from(usedProps),
                          selectedFields,
-                         // Передаём список брейкпоинтов для UI (имя и ширину)
                          breakpoints: Object.entries(breakpoints).map(([name, width]) => ({ name, width }))
                        });
 }
 
-// Функция для переключения на экран (брейкпоинт)
 function switchToBreakpoint(bp: string): void {
   const node = nodesByBreakpointGlobal[bp];
   if (node) {
     figma.viewport.scrollAndZoomIntoView([node]);
     processSelectedNodes();
   } else {
-    figma.notify(`Элемент для брейкпоинта ${bp} не найден.`);
+    figma.notify(`Element for breakpoint ${bp} not found.`);
   }
 }
 
-// Функции для истории выделения
 function goHistoryBack(): void {
   if (historyIndex > 0) {
     historyIndex--;
@@ -246,7 +207,7 @@ function goHistoryBack(): void {
     processSelectedNodes();
     updateHistoryButtons();
   } else {
-    figma.notify('Нет предыдущей истории.');
+    figma.notify('No previous history.');
   }
 }
 
@@ -259,15 +220,13 @@ function goHistoryForward(): void {
     processSelectedNodes();
     updateHistoryButtons();
   } else {
-    figma.notify('Нет дальнейшей истории.');
+    figma.notify('No forward history.');
   }
 }
 
-// Функция навигации по иерархии вверх/вниз (родитель/первый дочерний)
 function navigateSelection(direction: 'up' | 'down'): void {
   const currentSelection = figma.currentPage.selection;
   const newSelection: SceneNode[] = [];
-
   currentSelection.forEach(node => {
     if (direction === 'up') {
       if (node.parent && node.parent.type !== 'PAGE') {
@@ -279,20 +238,17 @@ function navigateSelection(direction: 'up' | 'down'): void {
       }
     }
   });
-
   if (newSelection.length > 0) {
     figma.currentPage.selection = newSelection;
     processSelectedNodes();
   } else {
-    figma.notify(`Нет элементов для перехода ${direction === 'up' ? 'вверх' : 'вниз'}`);
+    figma.notify(`No elements to navigate ${direction === 'up' ? 'up' : 'down'}.`);
   }
 }
 
-// Функция навигации по соседним элементам (предыдущий/следующий сосед)
 function navigateSiblings(direction: 'prev' | 'next'): void {
   const currentSelection = figma.currentPage.selection;
   const newSelectionSet = new Set<SceneNode>();
-
   currentSelection.forEach(node => {
     if (node.parent && 'children' in node.parent) {
       const siblings = node.parent.children as SceneNode[];
@@ -307,13 +263,12 @@ function navigateSiblings(direction: 'prev' | 'next'): void {
       }
     }
   });
-
   const newSelection = Array.from(newSelectionSet);
   if (newSelection.length > 0) {
     figma.currentPage.selection = newSelection;
     processSelectedNodes();
   } else {
-    figma.notify(`Нет соседних элементов для перехода ${direction === 'prev' ? 'влево' : 'вправо'}`);
+    figma.notify(`No sibling elements to navigate ${direction === 'prev' ? 'left' : 'right'}.`);
   }
 }
 
@@ -326,15 +281,12 @@ figma.ui.on('message', msg => {
     processSelectedNodes();
   }
   if (msg.type === 'navigate') {
-    // msg.direction: 'up' или 'down'
     navigateSelection(msg.direction);
   }
   if (msg.type === 'navigateSibling') {
-    // msg.direction: 'prev' или 'next'
     navigateSiblings(msg.direction);
   }
   if (msg.type === 'switchToBreakpoint') {
-    // msg.bp содержит имя брейкпоинта
     switchToBreakpoint(msg.bp);
   }
   if (msg.type === 'historyBack') {

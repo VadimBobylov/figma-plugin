@@ -26,12 +26,9 @@
           margin-bottom: 15px;
           color: #333;
       }
-
-      /* Переключатель флага to_rem */
       .toggle-container {
           margin-bottom: 15px;
       }
-      /* Селекторы по пропертям */
       .checkbox-container {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
@@ -70,7 +67,6 @@
           outline: none;
           border-color: #4caf50;
       }
-      /* Переключалки навигации и экранов */
       #controls {
           display: flex;
           flex-direction: column;
@@ -136,63 +132,46 @@
 <body>
 <div class="container">
   <h3>Generated Media Query</h3>
-
-  <!-- Переключатель флага to_rem -->
   <div class="toggle-container">
     <label>
       <input type="checkbox" id="useToRemCheckbox" checked>
       Use to_rem
     </label>
   </div>
-
-  <!-- Селекторы по пропертям -->
   <div class="checkbox-container" id="checkboxContainer"></div>
-
-  <!-- Вывод медиа-квери -->
   <textarea id="output" readonly></textarea>
-
-  <!-- Переключалки навигации и экранов -->
   <div id="controls">
-    <!-- Блок навигации по истории -->
     <div class="history-container">
-      <button class="nav-button" id="historyBack" title="Назад по истории">← History</button>
-      <button class="nav-button" id="historyForward" title="Вперёд по истории">→ History</button>
+      <button class="nav-button" id="historyBack" title="History Back">← History</button>
+      <button class="nav-button" id="historyForward" title="History Forward">History →</button>
     </div>
     <div class="nav-container">
-      <button class="nav-button" id="navUp" title="Перейти к родительскому элементу">⬆ Parent</button>
+      <button class="nav-button" id="navUp" title="Go to Parent">⬆ Parent</button>
       <div class="nav-row">
-        <button class="nav-button" id="navPrev" title="Перейти к предыдущему соседу">⬅ Prev</button>
-        <button class="nav-button" id="navNext" title="Перейти к следующему соседу">Next ➡</button>
+        <button class="nav-button" id="navPrev" title="Previous Sibling">⬅ Prev</button>
+        <button class="nav-button" id="navNext" title="Next Sibling">Next ➡</button>
       </div>
-      <button class="nav-button" id="navDown" title="Перейти к дочернему элементу">⬇ Children</button>
+      <button class="nav-button" id="navDown" title="Go to Child">⬇ Children</button>
     </div>
-    <!-- Кнопки переключения экранов -->
     <div class="screen-container" id="screenContainer"></div>
   </div>
-
   <script>
       function renderCheckboxes(availableProps, selectedFields) {
           const container = document.getElementById('checkboxContainer');
           container.innerHTML = '';
-
           if (availableProps.length === 0) return;
-
-          // Чекбокс "Выбрать все"
           const selectAllLabel = document.createElement('label');
           selectAllLabel.style.gridColumn = 'span 2';
           selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll"> Select All`;
           container.appendChild(selectAllLabel);
-
           const selectAllCheckbox = document.getElementById('selectAll');
           selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
-
           selectAllCheckbox.addEventListener('change', () => {
               document.querySelectorAll('.prop').forEach(cb => {
                   cb.checked = selectAllCheckbox.checked;
               });
               sendSelectedFields();
           });
-
           availableProps.forEach(prop => {
               const label = document.createElement('label');
               const checkbox = document.createElement('input');
@@ -200,32 +179,23 @@
               checkbox.className = 'prop';
               checkbox.value = prop;
               if (selectedFields.includes(prop)) checkbox.checked = true;
-
               label.appendChild(checkbox);
               label.appendChild(document.createTextNode(prop));
               container.appendChild(label);
-
               checkbox.addEventListener('change', () => {
                   selectAllCheckbox.checked = [...document.querySelectorAll('.prop')].every(cb => cb.checked);
                   sendSelectedFields();
               });
           });
       }
-
-      // Функция отрисовки кнопок для переключения экранов
       function renderScreenButtons(breakpoints) {
           const container = document.getElementById('screenContainer');
           container.innerHTML = '';
-
           if (!breakpoints || breakpoints.length === 0) return;
-
-          // Сортировка от большего к меньшему по ширине
           breakpoints.sort((a, b) => b.width - a.width);
-
           breakpoints.forEach(bp => {
               const btn = document.createElement('button');
               btn.className = 'screen-button';
-              // Отображаем только ширину
               btn.textContent = `${bp.width}px`;
               btn.addEventListener('click', () => {
                   parent.postMessage({pluginMessage: {type: 'switchToBreakpoint', bp: bp.name}}, '*');
@@ -233,20 +203,16 @@
               container.appendChild(btn);
           });
       }
-
       function sendSelectedFields() {
           const fields = [...document.querySelectorAll('.prop')]
               .filter(cb => cb.checked)
               .map(cb => cb.value);
           parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
       }
-
-      // Обработчик переключателя useToRem
       document.getElementById('useToRemCheckbox').addEventListener('change', (e) => {
           const useToRem = e.target.checked;
           parent.postMessage({pluginMessage: {type: 'toggleToRem', useToRem}}, '*');
       });
-
       document.getElementById('navUp').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
       });
@@ -265,7 +231,6 @@
       document.getElementById('historyForward').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'historyForward'}}, '*');
       });
-
       window.onmessage = event => {
           const msg = event.data.pluginMessage;
           if (msg) {
@@ -278,11 +243,8 @@
               if (msg.breakpoints !== undefined) {
                   renderScreenButtons(msg.breakpoints);
               }
-              // Можно добавить логику для обновления состояния кнопок истории,
-              // если потребуется их дизейблить/активировать.
           }
       };
-
       sendSelectedFields();
   </script>
 </div>
