@@ -32,12 +32,10 @@
           justify-content: space-between;
           align-items: center;
       }
-
       .nav-buttons {
           display: flex;
           gap: 10px;
       }
-
       .nav-button {
           padding: 5px 10px;
           font-size: 18px;
@@ -47,7 +45,6 @@
           background: #f9f9f9;
           transition: background 0.2s;
       }
-
       .nav-button:hover {
           background: #e0e0e0;
       }
@@ -113,10 +110,14 @@
 <div class="container">
   <h3>Generated Media Query</h3>
   <div id="controls">
-    <!-- Кнопки навигации -->
+    <!-- Блок навигационных кнопок -->
     <div class="nav-buttons">
+      <!-- Кнопки перемещения по иерархии -->
       <button class="nav-button" id="navUp" title="Выбрать родительские элементы (↑)">↑</button>
       <button class="nav-button" id="navDown" title="Выбрать дочерние элементы (↓)">↓</button>
+      <!-- Кнопки перемещения по соседним элементам -->
+      <button class="nav-button" id="navPrev" title="Выбрать предыдущий сосед (←)">←</button>
+      <button class="nav-button" id="navNext" title="Выбрать следующий сосед (→)">→</button>
     </div>
     <!-- Контейнер для чекбоксов -->
     <div class="checkbox-container" id="checkboxContainer"></div>
@@ -129,12 +130,10 @@
         const container = document.getElementById('checkboxContainer');
         container.innerHTML = '';
 
-        // Если availableProps пуст, ничего не генерируем
         if (availableProps.length === 0) {
             return;
         }
 
-        // Создаём чекбокс Select All
         const selectAllLabel = document.createElement('label');
         selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll">Select All`;
         container.appendChild(selectAllLabel);
@@ -149,7 +148,6 @@
             sendSelectedFields();
         });
 
-        // Создаём чекбоксы для каждой доступной проперти
         availableProps.forEach(prop => {
             const label = document.createElement('label');
             const checkbox = document.createElement('input');
@@ -164,14 +162,12 @@
             container.appendChild(label);
 
             checkbox.addEventListener('change', () => {
-                // Пересчитываем состояние Select All
                 selectAllCheckbox.checked = Array.from(document.querySelectorAll('.prop')).every(x => x.checked);
                 sendSelectedFields();
             });
         });
     }
 
-    // Отправка выбранных пользователем пропертей в плагин
     function sendSelectedFields() {
         const checkboxes = document.querySelectorAll('.prop');
         const fields = [];
@@ -183,7 +179,7 @@
         parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
     }
 
-    // Обработчики для кнопок навигации
+    // Обработчики кнопок навигации по иерархии
     document.getElementById('navUp').addEventListener('click', () => {
         parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
     });
@@ -191,7 +187,14 @@
         parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
     });
 
-    // При получении сообщения от плагина обновляем CSS и генерируем чекбоксы
+    // Обработчики кнопок навигации по соседним элементам
+    document.getElementById('navPrev').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
+    });
+    document.getElementById('navNext').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'next'}}, '*');
+    });
+
     window.onmessage = event => {
         const msg = event.data.pluginMessage;
         if (msg) {

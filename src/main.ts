@@ -170,19 +170,17 @@ function processSelectedNodes(selectAll = false): void {
                        });
 }
 
-// Обработчик навигации по иерархии (вверх/вниз)
+// Функция навигации по иерархии вверх/вниз (родитель/первый дочерний)
 function navigateSelection(direction: 'up' | 'down'): void {
   const currentSelection = figma.currentPage.selection;
   const newSelection: SceneNode[] = [];
 
   currentSelection.forEach(node => {
     if (direction === 'up') {
-      // Если родитель существует и не является страницей – выбираем родительский узел
       if (node.parent && node.parent.type !== 'PAGE') {
         newSelection.push(node.parent as SceneNode);
       }
     } else if (direction === 'down') {
-      // Если у узла есть дочерние элементы, выбираем первый из них
       if ('children' in node && node.children.length > 0) {
         newSelection.push(node.children[0] as SceneNode);
       }
@@ -191,10 +189,40 @@ function navigateSelection(direction: 'up' | 'down'): void {
 
   if (newSelection.length > 0) {
     figma.currentPage.selection = newSelection;
-    // figma.viewport.scrollAndZoomIntoView(newSelection);
-    setTimeout(() => processSelectedNodes(true), 100); // Перегенерировать CSS и обновить UI
+    // Не изменяем viewport – остаёмся в текущей области просмотра
+    processSelectedNodes();
   } else {
     figma.notify(`Нет элементов для перехода ${direction === 'up' ? 'вверх' : 'вниз'}`);
+  }
+}
+
+// Функция навигации по соседним элементам (предыдущий/следующий сосед)
+function navigateSiblings(direction: 'prev' | 'next'): void {
+  const currentSelection = figma.currentPage.selection;
+  const newSelectionSet = new Set<SceneNode>();
+
+  currentSelection.forEach(node => {
+    if (node.parent && 'children' in node.parent) {
+      const siblings = node.parent.children as SceneNode[];
+      const index = siblings.findIndex(sib => sib.id === node.id);
+      if (index !== -1) {
+        if (direction === 'prev' && index > 0) {
+          newSelectionSet.add(siblings[index - 1]);
+        }
+        if (direction === 'next' && index < siblings.length - 1) {
+          newSelectionSet.add(siblings[index + 1]);
+        }
+      }
+    }
+  });
+
+  const newSelection = Array.from(newSelectionSet);
+  if (newSelection.length > 0) {
+    figma.currentPage.selection = newSelection;
+    // Не перемещаем viewport
+    processSelectedNodes();
+  } else {
+    figma.notify(`Нет соседних элементов для перехода ${direction === 'prev' ? 'влево' : 'вправо'}`);
   }
 }
 
@@ -210,5 +238,9 @@ figma.ui.on('message', msg => {
   if (msg.type === 'navigate') {
     // msg.direction: 'up' или 'down'
     navigateSelection(msg.direction);
+  }
+  if (msg.type === 'navigateSibling') {
+    // msg.direction: 'prev' или 'next'
+    navigateSiblings(msg.direction);
   }
 });
