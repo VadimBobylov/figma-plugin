@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Media Query Generator</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          background: #f4f4f4;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+      }
+
+      .container {
+          background: #fff;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          border-radius: 10px;
+          padding: 20px;
+          max-width: 400px;
+          width: 100%;
+          text-align: center;
+      }
+
+      h3 {
+          margin-bottom: 15px;
+          color: #333;
+      }
+
+      #controls {
+          margin-bottom: 15px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+      }
+
+      /* Блок навигации */
+      .nav-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+      }
+
+      .nav-row {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+      }
+
+      .nav-button {
+          padding: 10px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          border: 1px solid #ccc;
+          border-radius: 8px;
+          background: #f9f9f9;
+          transition: background 0.2s, transform 0.1s;
+          width: 100px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+      }
+
+      .nav-button:hover {
+          background: #e0e0e0;
+      }
+
+      .nav-button:active {
+          transform: scale(0.95);
+      }
+
+      /* Чекбоксы в две колонки */
+      .checkbox-container {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          width: 100%;
+          justify-content: center;
+      }
+
+      label {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          font-size: 14px;
+          color: #333;
+          cursor: pointer;
+      }
+
+      input[type="checkbox"] {
+          width: 16px;
+          height: 16px;
+          cursor: pointer;
+      }
+
+      textarea {
+          width: 100%;
+          height: 200px;
+          resize: none;
+          border: 2px solid #ccc;
+          border-radius: 6px;
+          padding: 10px;
+          font-family: 'Courier New', monospace;
+          font-size: 14px;
+          color: #333;
+          transition: border-color 0.2s;
+      }
+
+      textarea:focus {
+          outline: none;
+          border-color: #4caf50;
+      }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h3>Generated Media Query</h3>
+
+  <div id="controls">
+    <!-- Блок навигации -->
+    <div class="nav-container">
+      <button class="nav-button" id="navUp" title="Перейти к родительскому элементу">⬆ Parent</button>
+      <div class="nav-row">
+        <button class="nav-button" id="navPrev" title="Перейти к предыдущему соседу">⬅ Prev</button>
+        <button class="nav-button" id="navNext" title="Перейти к следующему соседу">Next ➡</button>
+      </div>
+      <button class="nav-button" id="navDown" title="Перейти к дочернему элементу">⬇ Children</button>
+    </div>
+
+    <!-- Контейнер для чекбоксов -->
+    <div class="checkbox-container" id="checkboxContainer"></div>
+  </div>
+
+  <textarea id="output" readonly></textarea>
+</div>
+
+<script>
+    function renderCheckboxes(availableProps, selectedFields) {
+        const container = document.getElementById('checkboxContainer');
+        container.innerHTML = '';
+
+        if (availableProps.length === 0) return;
+
+        // Создаём чекбокс "Выбрать все"
+        const selectAllLabel = document.createElement('label');
+        selectAllLabel.style.gridColumn = 'span 2'; // Занимает всю ширину
+        selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll"> Select All`;
+        container.appendChild(selectAllLabel);
+
+        const selectAllCheckbox = document.getElementById('selectAll');
+        selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
+
+        selectAllCheckbox.addEventListener('change', () => {
+            document.querySelectorAll('.prop').forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            sendSelectedFields();
+        });
+
+        availableProps.forEach(prop => {
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'prop';
+            checkbox.value = prop;
+            if (selectedFields.includes(prop)) checkbox.checked = true;
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(prop));
+            container.appendChild(label);
+
+            checkbox.addEventListener('change', () => {
+                selectAllCheckbox.checked = [...document.querySelectorAll('.prop')].every(cb => cb.checked);
+                sendSelectedFields();
+            });
+        });
+    }
+
+    function sendSelectedFields() {
+        const fields = [...document.querySelectorAll('.prop')]
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+        parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
+    }
+
+    document.getElementById('navUp').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
+    });
+    document.getElementById('navDown').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
+    });
+    document.getElementById('navPrev').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
+    });
+    document.getElementById('navNext').addEventListener('click', () => {
+        parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'next'}}, '*');
+    });
+
+    window.onmessage = event => {
+        const msg = event.data.pluginMessage;
+        if (msg) {
+            if (msg.css !== undefined) {
+                document.getElementById('output').value = msg.css;
+            }
+            if (msg.availableProps !== undefined && msg.selectedFields !== undefined) {
+                renderCheckboxes(msg.availableProps, msg.selectedFields);
+            }
+        }
+    };
+
+    sendSelectedFields();
+</script>
+
+</body>
+</html>
