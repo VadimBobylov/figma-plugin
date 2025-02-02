@@ -26,6 +26,13 @@
           margin-bottom: 15px;
           color: #333;
       }
+
+      .history-container {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          margin-bottom: 15px;
+      }
       .toggle-container {
           margin-bottom: 15px;
       }
@@ -72,10 +79,6 @@
           flex-direction: column;
           gap: 15px;
           align-items: center;
-      }
-      .history-container {
-          display: flex;
-          gap: 10px;
       }
       .nav-container {
           display: flex;
@@ -127,11 +130,23 @@
       .screen-button:hover {
           background: #d0d0d0;
       }
+
+      .screen-button:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+      }
   </style>
 </head>
 <body>
 <div class="container">
   <h3>Generated Media Query</h3>
+
+  <!-- История размещена вверху -->
+  <div class="history-container">
+    <button class="nav-button" id="historyBack" title="History Back">← History</button>
+    <button class="nav-button" id="historyForward" title="History Forward">History →</button>
+  </div>
+
   <div class="toggle-container">
     <label>
       <input type="checkbox" id="useToRemCheckbox" checked>
@@ -140,11 +155,8 @@
   </div>
   <div class="checkbox-container" id="checkboxContainer"></div>
   <textarea id="output" readonly></textarea>
+
   <div id="controls">
-    <div class="history-container">
-      <button class="nav-button" id="historyBack" title="History Back">← History</button>
-      <button class="nav-button" id="historyForward" title="History Forward">History →</button>
-    </div>
     <div class="nav-container">
       <button class="nav-button" id="navUp" title="Go to Parent">⬆ Parent</button>
       <div class="nav-row">
@@ -155,6 +167,7 @@
     </div>
     <div class="screen-container" id="screenContainer"></div>
   </div>
+
   <script>
       function renderCheckboxes(availableProps, selectedFields) {
           const container = document.getElementById('checkboxContainer');
@@ -188,49 +201,66 @@
               });
           });
       }
+
+      // Принимаем, что объект bp имеет свойство active: true/false
       function renderScreenButtons(breakpoints) {
           const container = document.getElementById('screenContainer');
           container.innerHTML = '';
           if (!breakpoints || breakpoints.length === 0) return;
+          // Сортировка по убыванию ширины (можно изменить порядок по необходимости)
           breakpoints.sort((a, b) => b.width - a.width);
           breakpoints.forEach(bp => {
               const btn = document.createElement('button');
               btn.className = 'screen-button';
               btn.textContent = `${bp.width}px`;
-              btn.addEventListener('click', () => {
-                  parent.postMessage({pluginMessage: {type: 'switchToBreakpoint', bp: bp.name}}, '*');
-              });
+              // Если элемент для данного breakpoint отсутствует, кнопка будет disabled
+              if (!bp.active) {
+                  btn.disabled = true;
+              } else {
+                  btn.addEventListener('click', () => {
+                      parent.postMessage({pluginMessage: {type: 'switchToBreakpoint', bp: bp.name}}, '*');
+                  });
+              }
               container.appendChild(btn);
           });
       }
+
       function sendSelectedFields() {
           const fields = [...document.querySelectorAll('.prop')]
               .filter(cb => cb.checked)
               .map(cb => cb.value);
           parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
       }
+
       document.getElementById('useToRemCheckbox').addEventListener('change', (e) => {
           const useToRem = e.target.checked;
           parent.postMessage({pluginMessage: {type: 'toggleToRem', useToRem}}, '*');
       });
+
       document.getElementById('navUp').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
       });
+
       document.getElementById('navDown').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
       });
+
       document.getElementById('navPrev').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
       });
+
       document.getElementById('navNext').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'next'}}, '*');
       });
+
       document.getElementById('historyBack').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'historyBack'}}, '*');
       });
+
       document.getElementById('historyForward').addEventListener('click', () => {
           parent.postMessage({pluginMessage: {type: 'historyForward'}}, '*');
       });
+
       window.onmessage = event => {
           const msg = event.data.pluginMessage;
           if (msg) {
@@ -245,6 +275,7 @@
               }
           }
       };
+
       sendSelectedFields();
   </script>
 </div>

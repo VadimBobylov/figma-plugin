@@ -184,7 +184,11 @@ function processSelectedNodes(selectAll = false): void {
                          availableProps: Array.from(availablePropsSet),
                          usedProps: Array.from(usedProps),
                          selectedFields,
-                         breakpoints: Object.entries(breakpoints).map(([name, width]) => ({ name, width }))
+                         breakpoints: Object.entries(breakpoints).map(([name, width]) => ({
+                           name,
+                           width,
+                           active: !!nodesByBreakpointGlobal[name]
+                         }))
                        });
 }
 
@@ -194,7 +198,7 @@ function switchToBreakpoint(bp: string): void {
     figma.viewport.scrollAndZoomIntoView([node]);
     processSelectedNodes();
   } else {
-    figma.notify(`Element for breakpoint ${bp} not found.`);
+    figma.notify(`Element for breakpoint ${breakpoints[bp]}px not found.`);
   }
 }
 
