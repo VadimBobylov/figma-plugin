@@ -16,84 +16,88 @@
       .container {
           background: #fff;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          border-radius: 8px;
+          border-radius: 10px;
           padding: 20px;
-          max-width: 600px;
+          max-width: 400px;
           width: 100%;
-      }
-      h3 {
           text-align: center;
-          margin-bottom: 20px;
+      }
+
+      h3 {
+          margin-bottom: 15px;
           color: #333;
       }
       #controls {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
           display: flex;
-          justify-content: space-between;
+          flex-direction: column;
           align-items: center;
+          gap: 15px;
       }
-      .nav-buttons {
+
+      /* Блок навигации */
+      .nav-container {
           display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 5px;
+      }
+
+      .nav-row {
+          display: flex;
+          justify-content: center;
           gap: 10px;
       }
       .nav-button {
-          padding: 5px 10px;
-          font-size: 18px;
+          padding: 10px;
+          font-size: 16px;
+          font-weight: bold;
           cursor: pointer;
           border: 1px solid #ccc;
-          border-radius: 4px;
+          border-radius: 8px;
           background: #f9f9f9;
-          transition: background 0.2s;
+          transition: background 0.2s, transform 0.1s;
+          width: 100px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
       }
       .nav-button:hover {
           background: #e0e0e0;
       }
+
+      .nav-button:active {
+          transform: scale(0.95);
+      }
+
+      /* Чекбоксы в две колонки */
       .checkbox-container {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
+          width: 100%;
+          justify-content: center;
       }
       label {
           display: flex;
           align-items: center;
-          gap: 10px;
-          font-size: 16px;
+          gap: 5px;
+          font-size: 14px;
           color: #333;
           cursor: pointer;
       }
       input[type="checkbox"] {
-          appearance: none;
-          width: 20px;
-          height: 20px;
-          border: 2px solid #ccc;
-          border-radius: 4px;
-          background: #fff;
-          transition: all 0.2s ease;
-          position: relative;
+          width: 16px;
+          height: 16px;
           cursor: pointer;
-      }
-      input[type="checkbox"]:hover {
-          border-color: #888;
-      }
-      input[type="checkbox"]:checked {
-          background: #4caf50;
-          border-color: #4caf50;
-      }
-      input[type="checkbox"]:checked::after {
-          content: "\2713";
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: #fff;
-          font-size: 14px;
       }
       textarea {
           width: 100%;
           height: 200px;
           resize: none;
           border: 2px solid #ccc;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 10px;
           font-family: 'Courier New', monospace;
           font-size: 14px;
@@ -109,40 +113,43 @@
 <body>
 <div class="container">
   <h3>Generated Media Query</h3>
+
   <div id="controls">
-    <!-- Блок навигационных кнопок -->
-    <div class="nav-buttons">
-      <!-- Кнопки перемещения по иерархии -->
-      <button class="nav-button" id="navUp" title="Выбрать родительские элементы (↑)">↑</button>
-      <button class="nav-button" id="navDown" title="Выбрать дочерние элементы (↓)">↓</button>
-      <!-- Кнопки перемещения по соседним элементам -->
-      <button class="nav-button" id="navPrev" title="Выбрать предыдущий сосед (←)">←</button>
-      <button class="nav-button" id="navNext" title="Выбрать следующий сосед (→)">→</button>
+    <!-- Блок навигации -->
+    <div class="nav-container">
+      <button class="nav-button" id="navUp" title="Перейти к родительскому элементу">⬆ Parent</button>
+      <div class="nav-row">
+        <button class="nav-button" id="navPrev" title="Перейти к предыдущему соседу">⬅ Prev</button>
+        <button class="nav-button" id="navNext" title="Перейти к следующему соседу">Next ➡</button>
+      </div>
+      <button class="nav-button" id="navDown" title="Перейти к дочернему элементу">⬇ Children</button>
     </div>
+
     <!-- Контейнер для чекбоксов -->
     <div class="checkbox-container" id="checkboxContainer"></div>
   </div>
+
   <textarea id="output" readonly></textarea>
 </div>
+
 <script>
-    // Функция для генерации списка чекбоксов
     function renderCheckboxes(availableProps, selectedFields) {
         const container = document.getElementById('checkboxContainer');
         container.innerHTML = '';
 
-        if (availableProps.length === 0) {
-            return;
-        }
+        if (availableProps.length === 0) return;
 
+        // Создаём чекбокс "Выбрать все"
         const selectAllLabel = document.createElement('label');
-        selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll">Select All`;
+        selectAllLabel.style.gridColumn = 'span 2'; // Занимает всю ширину
+        selectAllLabel.innerHTML = `<input type="checkbox" id="selectAll"> Select All`;
         container.appendChild(selectAllLabel);
+
         const selectAllCheckbox = document.getElementById('selectAll');
         selectAllCheckbox.checked = availableProps.every(prop => selectedFields.includes(prop));
 
         selectAllCheckbox.addEventListener('change', () => {
-            const checkboxes = document.querySelectorAll('.prop');
-            checkboxes.forEach(cb => {
+            document.querySelectorAll('.prop').forEach(cb => {
                 cb.checked = selectAllCheckbox.checked;
             });
             sendSelectedFields();
@@ -154,40 +161,32 @@
             checkbox.type = 'checkbox';
             checkbox.className = 'prop';
             checkbox.value = prop;
-            if (selectedFields.includes(prop)) {
-                checkbox.checked = true;
-            }
+            if (selectedFields.includes(prop)) checkbox.checked = true;
+
             label.appendChild(checkbox);
             label.appendChild(document.createTextNode(prop));
             container.appendChild(label);
 
             checkbox.addEventListener('change', () => {
-                selectAllCheckbox.checked = Array.from(document.querySelectorAll('.prop')).every(x => x.checked);
+                selectAllCheckbox.checked = [...document.querySelectorAll('.prop')].every(cb => cb.checked);
                 sendSelectedFields();
             });
         });
     }
 
     function sendSelectedFields() {
-        const checkboxes = document.querySelectorAll('.prop');
-        const fields = [];
-        checkboxes.forEach(cb => {
-            if (cb.checked) {
-                fields.push(cb.value);
-            }
-        });
+        const fields = [...document.querySelectorAll('.prop')]
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
         parent.postMessage({pluginMessage: {type: 'update-fields', fields}}, '*');
     }
 
-    // Обработчики кнопок навигации по иерархии
     document.getElementById('navUp').addEventListener('click', () => {
         parent.postMessage({pluginMessage: {type: 'navigate', direction: 'up'}}, '*');
     });
     document.getElementById('navDown').addEventListener('click', () => {
         parent.postMessage({pluginMessage: {type: 'navigate', direction: 'down'}}, '*');
     });
-
-    // Обработчики кнопок навигации по соседним элементам
     document.getElementById('navPrev').addEventListener('click', () => {
         parent.postMessage({pluginMessage: {type: 'navigateSibling', direction: 'prev'}}, '*');
     });
@@ -207,7 +206,6 @@
         }
     };
 
-    // Изначально отправляем выбранные поля (по умолчанию – все)
     sendSelectedFields();
 </script>
 
