@@ -12,6 +12,10 @@ let selectedFields: string[] = [];
 // Глобальное хранилище для найденных нод по брейкпоинтам – используется для переключения экранов
 let nodesByBreakpointGlobal: Record<string, SceneNode> = {};
 
+// Глобальные переменные для истории выделения
+let selectionHistory: SceneNode[][] = [];
+let historyIndex = -1;
+
 function toRem(value: number): string {
   return `to_rem(${value})`;
 }
@@ -79,19 +83,56 @@ function getNodeStyles(node: any): { [key: string]: any } {
   );
 }
 
+function recordSelection() {
+  const currentSelection = [...figma.currentPage.selection]; // Преобразуем readonly массив в изменяемый
+  if (currentSelection.length === 0) {
+    return;
+  }
+
+  // Если история не пуста и текущее выделение совпадает с последним, не записываем его повторно
+  if (historyIndex >= 0) {
+    const lastSelection = selectionHistory[historyIndex];
+    if (
+      lastSelection.length === currentSelection.length &&
+      lastSelection.every((node, i) => node.id === currentSelection[i].id)
+    ) {
+      return;
+    }
+  }
+  // Если мы вернулись назад по истории и делаем новое выделение – удаляем "будущее"
+  if (historyIndex < selectionHistory.length - 1) {
+    selectionHistory = selectionHistory.slice(0, historyIndex + 1);
+  }
+  selectionHistory.push(currentSelection);
+  historyIndex = selectionHistory.length - 1;
+  updateHistoryButtons();
+}
+
+function updateHistoryButtons() {
+  // Можно отправить в UI информацию о том, активны ли кнопки (например, для дизейбла)
+  figma.ui.postMessage({
+                         type:                  'update-history-buttons',
+                         historyBackEnabled:    historyIndex > 0,
+                         historyForwardEnabled: historyIndex < selectionHistory.length - 1
+                       });
+}
+
 function processSelectedNodes(selectAll = false): void {
   const selectedNodes = figma.currentPage.selection;
   if (selectedNodes.length === 0) {
     figma.ui.postMessage({
-                           css:       '',
+                           css: '',
                            availableProps: [],
                            usedProps: [],
                            selectedFields
                          });
-    // Обновляем глобальное хранилище – очищаем
+    // Очищаем глобальное хранилище нод для брейкпоинтов
     nodesByBreakpointGlobal = {};
     return;
   }
+
+  // Запоминаем текущее выделение
+  recordSelection();
 
   const availablePropsSet = new Set<string>();
 
@@ -172,7 +213,7 @@ function processSelectedNodes(selectAll = false): void {
   Object.values(mediaQueries).forEach(diff => Object.keys(diff).forEach(prop => usedProps.add(prop)));
 
   figma.ui.postMessage({
-                         css:       generatedCSS,
+                         css: generatedCSS,
                          availableProps: Array.from(availablePropsSet),
                          usedProps: Array.from(usedProps),
                          selectedFields,
@@ -185,11 +226,37 @@ function processSelectedNodes(selectAll = false): void {
 function switchToBreakpoint(bp: string): void {
   const node = nodesByBreakpointGlobal[bp];
   if (node) {
-    // figma.currentPage.selection = [node];
     figma.viewport.scrollAndZoomIntoView([node]);
     processSelectedNodes();
   } else {
     figma.notify(`Элемент для брейкпоинта ${bp} не найден.`);
+  }
+}
+
+// Функции для истории выделения
+function goHistoryBack(): void {
+  if (historyIndex > 0) {
+    historyIndex--;
+    const previousSelection = selectionHistory[historyIndex];
+    figma.currentPage.selection = previousSelection;
+    figma.viewport.scrollAndZoomIntoView(previousSelection);
+    processSelectedNodes();
+    updateHistoryButtons();
+  } else {
+    figma.notify('Нет предыдущей истории.');
+  }
+}
+
+function goHistoryForward(): void {
+  if (historyIndex < selectionHistory.length - 1) {
+    historyIndex++;
+    const nextSelection = selectionHistory[historyIndex];
+    figma.currentPage.selection = nextSelection;
+    figma.viewport.scrollAndZoomIntoView(nextSelection);
+    processSelectedNodes();
+    updateHistoryButtons();
+  } else {
+    figma.notify('Нет дальнейшей истории.');
   }
 }
 
@@ -266,5 +333,11 @@ figma.ui.on('message', msg => {
   if (msg.type === 'switchToBreakpoint') {
     // msg.bp содержит имя брейкпоинта
     switchToBreakpoint(msg.bp);
+  }
+  if (msg.type === 'historyBack') {
+    goHistoryBack();
+  }
+  if (msg.type === 'historyForward') {
+    goHistoryForward();
   }
 });
