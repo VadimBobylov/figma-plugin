@@ -71,7 +71,7 @@ function getNodeStyles(node: any): { [key: string]: any } {
     padding:          formatPadding(node),
     'font-size':      toRemIfNonZero(node.fontSize),
     'font-weight':    node.fontWeight,
-    'line-height': node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number' ? toRem(node.lineHeight.value) : node.lineHeight.value.toFixed(1) + '%',
+    'line-height': node.lineHeight?.unit === 'PIXELS' && typeof node.lineHeight.value === 'number' ? toRem(node.lineHeight.value) : node.lineHeight?.value?.toFixed(1).concat('%'),
     'letter-spacing': node.letterSpacing?.value === undefined ? undefined : toRemIfNonZero(node.letterSpacing.value)
   };
   return Object.fromEntries(Object.entries(styles).filter(([, value]) => value !== undefined));
